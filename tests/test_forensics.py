@@ -214,3 +214,40 @@ def test_tool_boundary_is_the_same_for_labelling_and_session_exclusion():
 
     items = _stamped(*[(None, [stamp]) for _ in range(forensics.TOOL_THRESHOLD)])
     assert forensics.sessions(items, min_edits=1) == []  # excluded, not a person
+
+
+def test_tool_exclusion_boundary_is_shared_by_label_and_windows():
+    """At exactly TOOL_THRESHOLD the burst is labelled a tool, so drop it too."""
+    stamp = "2015-11-20T17:18:21"
+    counts = Counter({stamp: forensics.TOOL_THRESHOLD})
+
+    (burst,) = forensics.bursts_from_counts(counts)
+    assert burst.classification == "interactive bulk tool"
+    assert forensics.tool_timestamps_from_counts(counts) == {stamp}
+
+    below = Counter({stamp: forensics.TOOL_THRESHOLD - 1})
+    assert forensics.tool_timestamps_from_counts(below) == set()
+
+
+def test_a_tool_burst_cannot_pad_a_window_to_the_minimum():
+    """5 tool edits + 5 hand edits must not report as one 10-edit window."""
+    stamp = "2015-11-20T17:18:21"
+    items = _stamped(
+        *[(None, [stamp]) for _ in range(forensics.TOOL_THRESHOLD)],
+        *[(None, [f"2015-11-20T17:19:{s:02d}"]) for s in range(0, 50, 10)],
+    )
+    assert forensics.sessions(items, min_edits=10) == []
+
+
+def test_midnight_stamps_never_enter_a_window():
+    """A midnight stamp is a date with no time -- it has no cadence to add."""
+    items = _stamped(
+        ("Unrestricted", ["2013-06-27T00:00:00"]),  # lone, far below BATCH_THRESHOLD
+        *[(None, [f"2018-10-03T09:{m:02d}:00"]) for m in range(10)],
+    )
+    (window,) = forensics.sessions(items, min_edits=10)
+    assert window["count"] == 10  # the midnight edit is not among them
+    assert window["start"].startswith("2018-10-03T09:00")
+
+    # But it is still a modification, so edit_intensity keeps counting it.
+    assert forensics.edit_intensity(items)["open"]["mean_mods"] == 1.0

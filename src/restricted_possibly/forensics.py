@@ -92,6 +92,15 @@ def batch_timestamps_from_counts(
     return {b.timestamp for b in bursts_from_counts(counts, threshold) if b.is_midnight}
 
 
+def tool_timestamps_from_counts(counts: Counter[str], threshold: int = TOOL_THRESHOLD) -> set[str]:
+    """Non-midnight stamps repeated enough times to be one bulk-tool run.
+
+    The single definition of "this was a tool, not a person," so `sessions`
+    and the CLI's streaming path cannot drift apart on the boundary.
+    """
+    return {t for t, n in counts.items() if n >= threshold and not t.endswith("T00:00:00")}
+
+
 def bursts(items: list[dict[str, Any]], min_count: int = TOOL_THRESHOLD) -> list[Burst]:
     """Single-shard convenience. For a whole group, fold `timestamp_counts`."""
     return bursts_from_counts(timestamp_counts(items), min_count)
@@ -128,7 +137,7 @@ def sessions(
     intervals, which is the opposite of the hand-worked cadence this looks for.
     """
     counts = timestamp_counts(items)
-    machine = {t for t, n in counts.items() if n >= max_identical}
+    machine = tool_timestamps_from_counts(counts, max_identical)
     return sessions_from_events(collect_events(items, machine), gap_seconds, min_edits)
 
 
@@ -137,9 +146,17 @@ def collect_events(items: list[dict[str, Any]], machine_stamps: set[str]) -> lis
 
     Two pairs of strings per edit rather than the parsed record, so a caller
     can accumulate these across a whole group while holding one shard at a
-    time. Midnight stamps are batch imports; `machine_stamps` carries the
-    group-wide bulk-tool timestamps, which cannot be identified from a single
-    shard.
+    time. `machine_stamps` carries the group-wide bulk-tool timestamps, which
+    cannot be identified from a single shard.
+
+    **Every** ``T00:00:00`` stamp is dropped, regardless of how many records
+    share it -- a stricter rule than `BATCH_THRESHOLD`, and deliberately so.
+    Windows are built from *cadence*, and a midnight stamp is a date with no
+    time of day recorded, so it carries no cadence to contribute; admitting
+    one would place a spurious event at 00:00:00 next to real ones. This is
+    why `edit_intensity` and this function treat a 3-record midnight stamp
+    differently: counting edits and measuring pace are different questions,
+    and only the second needs a real clock time.
     """
     out: list[tuple[str, str]] = []
     for _level, body in schema.iter_v1_descriptions(items):

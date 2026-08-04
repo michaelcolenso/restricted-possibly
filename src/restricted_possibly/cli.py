@@ -150,9 +150,10 @@ def inventory_cmd(
         console.print(e)
         if "Other" in summary.by_exemption:
             console.print(
-                "[yellow]`Other` present -- read the `note` column. "
-                "It is an escape hatch from the controlled vocabulary and the "
-                "note carries the actual statute.[/yellow]"
+                "[yellow]`Other` present -- read the `note` column. It is an escape "
+                "hatch from the controlled vocabulary and carries no meaning of its "
+                "own; only the note says what the basis actually is, and it is not "
+                "always a statute.[/yellow]"
             )
     console.print(f"wrote [green]{path}[/green] ({len(rows)} rows)")
     (out / f"summary_{group}{suffix}.json").write_text(
@@ -162,14 +163,17 @@ def inventory_cmd(
 
 @app.command()
 def sessions(shard: list[Path]) -> None:
-    """Reconstruct human working sessions from local v1 shards.
+    """Reconstruct activity windows of hand-paced editing from local v1 shards.
 
-    v1 only -- `recordHistory` does not exist in current data.
+    v1 only -- `recordHistory` does not exist in current data. A window is not
+    a person: v1 has no actor field, so concurrent editors merge. See
+    `forensics.sessions`.
 
     Pass **every** shard of the record group. Burst classification is a
     frequency test, and frequencies are only meaningful group-wide: an import
     of 1,835 records spread over 400 shards is ~5 per file, which clears no
-    threshold anywhere and gets counted as human review in each one.
+    threshold anywhere and gets counted as human activity in each one.
+
     Two streaming passes, never more than one shard resident. Holding all of
     them at once would need the group's entire deserialized JSON in memory,
     and expanded Python objects run several times the 50 MB+ on-disk size --
@@ -189,7 +193,7 @@ def sessions(shard: list[Path]) -> None:
     for path in shard:
         counts += forensics.timestamp_counts(schema.load_v1(path))
 
-    machine = {t for t, n in counts.items() if n > 5}
+    machine = forensics.tool_timestamps_from_counts(counts)
     noise = forensics.batch_timestamps_from_counts(counts)
 
     # Pass 2: fold the compact per-shard aggregates.
