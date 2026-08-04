@@ -57,7 +57,7 @@ That's one record group of 551.
 Requires Python 3.11+.
 
 ```bash
-git clone https://github.com/OWNER/restricted-possibly
+git clone https://github.com/michaelcolenso/restricted-possibly
 cd restricted-possibly
 pip install -e ".[dev]"        # or: uv sync --extra dev
 pytest -m "not network"        # offline suite
@@ -174,8 +174,12 @@ Use the batch signature as a **noise filter** — bulk imports dominate raw edit
 mean nothing.
 
 ```bash
-rp sessions path/to/rg_263-0.json    # reconstruct working sessions
+rp sessions path/to/rg_263-*.json    # reconstruct working sessions
 ```
+
+Pass every shard, not one. Burst classification is a frequency test, so it's only
+meaningful group-wide: an import of 1,835 records spread across 400 shards is ~5 per file
+and clears no threshold anywhere, which turns a machine into 400 little humans.
 
 ---
 
@@ -190,9 +194,17 @@ Do not build a status-change monitor. **Do** run `write_once_check` on other rec
 groups — a counterexample would be a significant finding, and it's established for exactly
 one agency.
 
-**Agencies have distinguishable withholding signatures.** RG 263 is ~98% FOIA (b)(1)
-National Security. A State Department sample showed a substantial (b)(6) Personal
-Information share. Quantifying this across all 551 groups is the obvious next study.
+## Suggested, not established
+
+**Agencies may have distinguishable withholding signatures.** RG 263 is ~98% FOIA (b)(1)
+National Security; a State Department *sample* showed a substantial (b)(6) Personal
+Information share. That is one full survey against one sample — short of the three record
+groups this project requires before generalizing. Quantifying it across all 551 groups is
+the obvious next study.
+
+**Edit intensity may distinguish adjudicated from categorical restriction.** Held in two
+agencies, inverted in a third, and the published ratios are stale pending recomputation.
+See `docs/FINDINGS.md`.
 
 Full detail, including five refuted hypotheses, in [`docs/FINDINGS.md`](docs/FINDINGS.md).
 

@@ -4,7 +4,7 @@ message: "If you use this software or its findings, please cite both this reposi
 type: software
 authors:
   - name: "restricted-possibly contributors"
-repository-code: "https://github.com/OWNER/restricted-possibly"
+repository-code: "https://github.com/michaelcolenso/restricted-possibly"
 license: MIT
 keywords:
   - national archives

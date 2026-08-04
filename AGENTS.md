@@ -292,7 +292,7 @@ The corpus rewards pattern-hunting and punishes credulity. Every anomaly encount
 4. **Check whether a field exists in the schema you're actually querying.** The `recordHistory` trap: an entire technique built on v1 data, silently inapplicable to v2. Enumerate keys first.
 5. **Distinguish processing events from release events.** Metadata records when NARA *touched* something. It does not record when the public *got* something. Newly described ≠ newly opened.
 6. **Validate against external ground truth before claiming significance.** A metadata spike means nothing until it lines up with a documented event. Two external hypotheses were tested (2013 spike → bulk import; April 2018 JFK release → no timestamp clustering) and both failed. That is the process succeeding.
-7. **Small samples mislead on rates.** 10k-record sample suggested ~5% restricted in RG 263; the full 26,858-record pass gave ~7%.
+7. **Small samples mislead on rates.** A 10k-record sample suggested ~5% restricted in RG 263. This rule was originally justified by a full pass giving ~7% — but that figure was the inflated one (it counted the unreviewed backlog), and the corrected full pass gives 5.6%, close to the sample. The rule still holds on general grounds; the example that was cited for it no longer demonstrates it, and whether sampling actually misleads on this corpus is now an open question. Do not cite the ~7% number.
 8. **Two refutations in one frame ⇒ review the frame, not the hypothesis.** Killing hypotheses is routine and feels like progress; it can mask the fact that the whole line of inquiry is barren. See §0.
 9. **Record refutations explicitly.** They are findings and they stop the next person repeating the work.
 

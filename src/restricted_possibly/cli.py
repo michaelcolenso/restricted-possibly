@@ -61,8 +61,25 @@ def inventory_cmd(
     limit_shards: int = typer.Option(0, help="0 = all shards. Use a small N to smoke-test."),
 ) -> None:
     """Extract every withheld description in a record group to CSV."""
+    if not corpus.shards(group):
+        console.print(
+            f"[red]no shards for {group} -- nothing was scanned.[/red] A misspelled group "
+            "would otherwise produce an empty CSV and a 0% rate that looks like a result."
+        )
+        raise typer.Exit(1)
+
     rows, summary = inventory.build(group, limit_shards or None)
-    path = inventory.write_csv(rows, out / f"withheld_{group}.csv")
+
+    # A partial run never overwrites a full one: an expensive complete inventory
+    # and a 3-shard smoke test are indistinguishable once written, so the limit
+    # goes in the filename.
+    suffix = f".partial-{limit_shards}shards" if limit_shards else ""
+    path = inventory.write_csv(rows, out / f"withheld_{group}{suffix}.csv")
+    if limit_shards:
+        console.print(
+            f"[yellow]partial run: {limit_shards} shards only. These counts are a sample, "
+            "not a survey.[/yellow]"
+        )
 
     t = Table("metric", "value")
     t.add_row("scanned", f"{summary.scanned:,}")
@@ -92,17 +109,31 @@ def inventory_cmd(
                 "note carries the actual statute.[/yellow]"
             )
     console.print(f"wrote [green]{path}[/green] ({len(rows)} rows)")
-    (out / f"summary_{group}.json").write_text(json.dumps(summary.__dict__, indent=2))
+    (out / f"summary_{group}{suffix}.json").write_text(
+        json.dumps({**summary.__dict__, "limit_shards": limit_shards or None}, indent=2)
+    )
 
 
 @app.command()
-def sessions(shard: Path) -> None:
-    """Reconstruct human working sessions from a local v1 shard.
+def sessions(shard: list[Path]) -> None:
+    """Reconstruct human working sessions from local v1 shards.
 
     v1 only -- `recordHistory` does not exist in current data.
+
+    Pass **every** shard of the record group. Burst classification is a
+    frequency test, and frequencies are only meaningful group-wide: an import
+    of 1,835 records spread over 400 shards is ~5 per file, which clears no
+    threshold anywhere and gets counted as human review in each one.
     """
-    items = schema.load_v1(shard)
-    console.print(f"parsed {len(items):,} items")
+    items: list[dict] = []
+    for path in shard:
+        items.extend(schema.load_v1(path))
+    console.print(f"parsed {len(items):,} items from {len(shard)} shard(s)")
+    if len(shard) == 1:
+        console.print(
+            "[yellow]single shard: burst counts are shard-local. A group-wide batch "
+            "import can fall below threshold here and be misread as human activity.[/yellow]"
+        )
 
     b = forensics.bursts(items)[:8]
     t = Table("timestamp", "records", "classification")
