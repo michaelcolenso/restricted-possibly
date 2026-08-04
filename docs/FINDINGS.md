@@ -76,11 +76,14 @@ in Guatemala* — the **open** series, `Restricted - Partly` because the CIA red
 some records before transfer. That last one is the open counterpart to the 25 above,
 and is where the reconciliation problem in `OPEN-QUESTIONS.md` lives.
 
-**Falsified by:** an **RG 263** `Other`-coded record whose note is absent or cites no
-legal basis. The claim is that within this record group the note is reliably the answer,
-so only an RG 263 counterexample can break it.
+**Falsified by:** an **RG 263** `Other`-coded record whose note is absent, or present but
+does not say why the code was used. The claim is that within this record group the note
+reliably explains the code — *not* that it cites a statute. naId 6106938's note ("Some
+records were redacted by the Central Intelligence Agency (CIA) prior to their release")
+cites no law and is still a supporting instance: it says exactly why `Other` was used.
+Only an RG 263 counterexample can break this.
 
-An `Other` record with no note in another group refutes nothing here — it refutes the
+An uninformative or missing note in another group refutes nothing here — it refutes the
 corpus-wide generalization, which this section does not make. It would still be the most
 useful thing the sweep in `OPEN-QUESTIONS.md` could turn up.
 **Replicated across: 1 agency.**

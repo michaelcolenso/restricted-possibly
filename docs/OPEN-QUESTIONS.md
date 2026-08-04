@@ -37,9 +37,17 @@ pre-transfer redaction.
 
 **Whether that holds anywhere else is the hypothesis this sweep tests**, not a premise it
 starts from. An `Other` record with a missing or uninformative note is the interesting
-outcome: it would falsify the RG 263 finding's load-bearing claim (see `FINDINGS.md`) and
-mean the code is a genuine void rather than a pointer. Record those separately from the
-ones whose notes do explain. The sweep is cheap either way.
+outcome: it means the code is a genuine void rather than a pointer, in at least one
+agency.
+
+Such a record found *outside* RG 263 does not falsify the RG 263 finding — that one is
+scoped to its own group and stays standing (see `FINDINGS.md`). What it refutes is the
+generalization, which is precisely what this sweep exists to test. Record those separately
+from the ones whose notes do explain. The sweep is cheap either way.
+
+Note the bar: the note has to say *why the code was used*, not cite a statute. One of the
+RG 263 instances explains a pre-transfer redaction with no law attached and counts as
+explained.
 
 ## 4. What is in the 100 GB+ record groups?
 
