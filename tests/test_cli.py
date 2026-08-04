@@ -61,3 +61,35 @@ def test_partial_run_does_not_overwrite_a_full_inventory(monkeypatch, tmp_path):
         "withheld_rg_263.csv",
         "withheld_rg_263.partial-3shards.csv",
     ]
+
+
+def test_inventory_refuses_a_group_too_large_to_run_without_checkpointing(monkeypatch):
+    """RG 64 is 180 GB and this scan writes nothing until the last shard."""
+    big = [corpus.Shard(f"k{i}", 500_000_000) for i in range(400)]  # 200 GB
+    monkeypatch.setattr(corpus, "shards", lambda *a, **k: big)
+    called = False
+
+    def _build(*a, **k):
+        nonlocal called
+        called = True
+        return [], _summary()
+
+    monkeypatch.setattr(inventory, "build", _build)
+
+    blocked = runner.invoke(cli.app, ["inventory", "rg_64"])
+    assert blocked.exit_code == 1
+    assert not called
+
+
+def test_large_group_is_allowed_deliberately_or_when_sampled(monkeypatch, tmp_path):
+    big = [corpus.Shard(f"k{i}", 500_000_000) for i in range(400)]
+    monkeypatch.setattr(corpus, "shards", lambda *a, **k: big)
+    monkeypatch.setattr(inventory, "build", lambda *a, **k: ([], _summary()))
+
+    forced = runner.invoke(cli.app, ["inventory", "rg_64", "--out", str(tmp_path), "--allow-large"])
+    assert forced.exit_code == 0
+
+    sampled = runner.invoke(
+        cli.app, ["inventory", "rg_64", "--out", str(tmp_path), "--limit-shards", "2"]
+    )
+    assert sampled.exit_code == 0

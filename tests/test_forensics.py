@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections import Counter, defaultdict
+
 from restricted_possibly import forensics
 
 
@@ -134,3 +136,56 @@ def test_sessions_excludes_bulk_tool_bursts():
     assert session["count"] == 15
     assert session["start"].startswith("2018-10-03T09:45")
     assert session["mean_interval_seconds"] > 0
+
+
+def test_streaming_primitives_match_the_single_shard_functions():
+    """The two-pass CLI path must agree with the all-in-memory one.
+
+    `rp sessions` folds compact per-shard aggregates instead of concatenating
+    every parsed shard, so the aggregates have to reproduce the same answer.
+    """
+    burst = "2015-11-20T17:18:21"
+    batch = "2013-06-27T00:00:00"
+    shard_a = _stamped(
+        *[("Unrestricted", [batch, burst]) for _ in range(30)],
+        ("Restricted - Fully", [batch, "2018-10-03T09:00:00"]),
+    )
+    shard_b = _stamped(
+        *[("Unrestricted", [batch, burst]) for _ in range(30)],
+        *[(None, [f"2018-10-03T10:{m:02d}:00"]) for m in range(0, 30, 2)],
+    )
+    whole = shard_a + shard_b
+
+    counts: Counter[str] = Counter()
+    for shard in (shard_a, shard_b):
+        counts += forensics.timestamp_counts(shard)
+    machine = {t for t, n in counts.items() if n > 5}
+    noise = forensics.batch_timestamps_from_counts(counts)
+
+    events: list[tuple[str, str]] = []
+    buckets: dict[str, list[int]] = defaultdict(list)
+    for shard in (shard_a, shard_b):
+        events += forensics.collect_events(shard, machine)
+        forensics.collect_intensity(shard, noise, buckets)
+
+    assert forensics.sessions_from_events(events) == forensics.sessions(whole)
+    assert forensics.intensity_from_buckets(buckets) == forensics.edit_intensity(whole)
+    assert forensics.bursts_from_counts(counts) == forensics.bursts(whole)
+
+
+def test_group_wide_counts_catch_a_batch_that_hides_in_every_shard():
+    """The reason pass 1 exists: 60 records over 30 shards is 2 per file."""
+    shards = [
+        _stamped(
+            ("Unrestricted", ["2013-06-27T00:00:00"]), ("Unrestricted", ["2013-06-27T00:00:00"])
+        )
+        for _ in range(30)
+    ]
+
+    per_shard = [forensics.batch_timestamps(s) for s in shards]
+    assert all(s == set() for s in per_shard)  # invisible shard-by-shard
+
+    counts: Counter[str] = Counter()
+    for s in shards:
+        counts += forensics.timestamp_counts(s)
+    assert forensics.batch_timestamps_from_counts(counts) == {"2013-06-27T00:00:00"}

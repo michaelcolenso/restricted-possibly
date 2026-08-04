@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections import Counter, defaultdict
 from pathlib import Path
 
 import typer
@@ -16,6 +17,11 @@ app = typer.Typer(
     help="Survey the National Archives Catalog corpus. Read-only, no credentials.",
 )
 console = Console()
+
+#: Above this, a full pass is a long uninterruptible commitment. RG 64 is
+#: 180 GB and RG 29 is 97 GB; AGENTS.md 4.2 says not to attempt those
+#: interactively, and nothing here checkpoints yet.
+LARGE_GROUP_GB = 20.0
 
 
 @app.command()
@@ -63,12 +69,30 @@ def inventory_cmd(
         False,
         help="Emit identifying fields for item/fileUnit (b)(6) records. Off by default.",
     ),
+    allow_large: bool = typer.Option(
+        False,
+        help=f"Permit a group larger than {LARGE_GROUP_GB} GB. There is no checkpointing.",
+    ),
 ) -> None:
     """Extract every withheld description in a record group to CSV."""
-    if not corpus.shards(group):
+    sh = corpus.shards(group)
+    if not sh:
         console.print(
             f"[red]no shards for {group} -- nothing was scanned.[/red] A misspelled group "
             "would otherwise produce an empty CSV and a 0% rate that looks like a result."
+        )
+        raise typer.Exit(1)
+
+    # This scan is not resumable: it writes nothing until the last shard, so an
+    # interruption 170 GB into RG 64 costs the whole run. Until checkpointing
+    # exists, refuse the groups where that bill is unaffordable rather than
+    # letting someone discover it at the end.
+    gb = sum(s.size for s in sh) / 1e9
+    if gb > LARGE_GROUP_GB and not (limit_shards or allow_large):
+        console.print(
+            f"[red]{group} is {gb:.1f} GB across {len(sh)} shards and this scan has no "
+            f"checkpointing[/red] -- an interruption at any point loses everything. "
+            "Smoke-test with --limit-shards first, or pass --allow-large to accept the risk."
         )
         raise typer.Exit(1)
 
@@ -142,31 +166,51 @@ def sessions(shard: list[Path]) -> None:
     frequency test, and frequencies are only meaningful group-wide: an import
     of 1,835 records spread over 400 shards is ~5 per file, which clears no
     threshold anywhere and gets counted as human review in each one.
+    Two streaming passes, never more than one shard resident. Holding all of
+    them at once would need the group's entire deserialized JSON in memory,
+    and expanded Python objects run several times the 50 MB+ on-disk size --
+    so the fold is over compact per-shard aggregates (a timestamp Counter,
+    then `(timestamp, naId)` pairs and per-record edit counts) rather than
+    over records.
     """
-    items: list[dict] = []
-    for path in shard:
-        items.extend(schema.load_v1(path))
-    console.print(f"parsed {len(items):,} items from {len(shard)} shard(s)")
     if len(shard) == 1:
         console.print(
             "[yellow]single shard: burst counts are shard-local. A group-wide batch "
             "import can fall below threshold here and be misread as human activity.[/yellow]"
         )
 
-    b = forensics.bursts(items)[:8]
+    # Pass 1: group-wide timestamp frequencies. Nothing can be classified
+    # before this exists, which is why one pass will not do.
+    counts: Counter[str] = Counter()
+    for path in shard:
+        counts += forensics.timestamp_counts(schema.load_v1(path))
+
+    machine = {t for t, n in counts.items() if n > 5}
+    noise = forensics.batch_timestamps_from_counts(counts)
+
+    # Pass 2: fold the compact per-shard aggregates.
+    events: list[tuple[str, str]] = []
+    buckets: dict[str, list[int]] = defaultdict(list)
+    for path in shard:
+        items = schema.load_v1(path)
+        events += forensics.collect_events(items, machine)
+        forensics.collect_intensity(items, noise, buckets)
+
+    console.print(f"{sum(counts.values()):,} modifications across {len(shard)} shard(s)")
+
     t = Table("timestamp", "records", "classification")
-    for burst in b:
+    for burst in forensics.bursts_from_counts(counts)[:8]:
         t.add_row(burst.timestamp, str(burst.count), burst.classification)
     console.print(t)
 
-    for s in forensics.sessions(items):
+    for s in forensics.sessions_from_events(events):
         console.print(
             f"[bold]{s['start']}[/bold] -> {s['end']}  "
             f"{s['count']} edits over {s['duration_minutes']} min "
             f"(mean {s['mean_interval_seconds']}s apart)"
         )
 
-    console.print(forensics.edit_intensity(items))
+    console.print(forensics.intensity_from_buckets(buckets))
 
 
 def main() -> None:

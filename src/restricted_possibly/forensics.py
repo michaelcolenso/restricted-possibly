@@ -50,17 +50,40 @@ class Burst:
         return "manual edit"
 
 
-def bursts(items: list[dict[str, Any]], min_count: int = 5) -> list[Burst]:
-    """Identical-to-the-second timestamps, descending by frequency."""
+def timestamp_counts(items: list[dict[str, Any]]) -> Counter[str]:
+    """Modification timestamps and their frequencies for one shard.
+
+    The streaming primitive: a shard's parsed JSON is large, this Counter is
+    small, so a caller can fold one of these per shard and drop each shard
+    before loading the next. Burst classification is a frequency test and
+    frequencies are only meaningful group-wide (see `sessions`), so the fold
+    has to happen somewhere -- doing it on counts rather than on records is
+    what keeps a 400-shard group inside memory.
+    """
     ct: Counter[str] = Counter()
     for _level, body in schema.iter_v1_descriptions(items):
         ct.update(schema.v1_modifications(body))
-    return [Burst(t, n) for t, n in ct.most_common() if n >= min_count]
+    return ct
+
+
+def bursts_from_counts(counts: Counter[str], min_count: int = 5) -> list[Burst]:
+    """Identical-to-the-second timestamps, descending by frequency."""
+    return [Burst(t, n) for t, n in counts.most_common() if n >= min_count]
+
+
+def batch_timestamps_from_counts(counts: Counter[str], threshold: int = 50) -> set[str]:
+    """Timestamps to treat as machine noise when filtering."""
+    return {b.timestamp for b in bursts_from_counts(counts, threshold) if b.is_midnight}
+
+
+def bursts(items: list[dict[str, Any]], min_count: int = 5) -> list[Burst]:
+    """Single-shard convenience. For a whole group, fold `timestamp_counts`."""
+    return bursts_from_counts(timestamp_counts(items), min_count)
 
 
 def batch_timestamps(items: list[dict[str, Any]], threshold: int = 50) -> set[str]:
-    """Timestamps to treat as machine noise when filtering."""
-    return {b.timestamp for b in bursts(items, min_count=threshold) if b.is_midnight}
+    """Single-shard convenience. For a whole group, fold `timestamp_counts`."""
+    return batch_timestamps_from_counts(timestamp_counts(items), threshold)
 
 
 def sessions(
@@ -81,30 +104,47 @@ def sessions(
     zero-second intervals, which is the opposite of the hand-worked cadence
     this function claims to find.
     """
-    from datetime import datetime
+    counts = timestamp_counts(items)
+    machine = {t for t, n in counts.items() if n > max_identical}
+    return sessions_from_events(collect_events(items, machine), gap_seconds, min_edits)
 
-    ct: Counter[str] = Counter()
-    for _level, body in schema.iter_v1_descriptions(items):
-        ct.update(schema.v1_modifications(body))
-    tool_stamps = {t for t, n in ct.items() if n > max_identical}
 
-    events: list[tuple[datetime, str]] = []
+def collect_events(items: list[dict[str, Any]], machine_stamps: set[str]) -> list[tuple[str, str]]:
+    """`(timestamp, naId)` pairs for one shard, machine activity removed.
+
+    Two pairs of strings per edit rather than the parsed record, so a caller
+    can accumulate these across a whole group while holding one shard at a
+    time. Midnight stamps are batch imports; `machine_stamps` carries the
+    group-wide bulk-tool timestamps, which cannot be identified from a single
+    shard.
+    """
+    out: list[tuple[str, str]] = []
     for _level, body in schema.iter_v1_descriptions(items):
         na = str(body.get("naId"))
         for t in schema.v1_modifications(body):
-            if t.endswith("T00:00:00"):
-                continue  # machine
-            if t in tool_stamps:
-                continue  # bulk tool, not a person
-            try:
-                events.append((datetime.fromisoformat(t), na))
-            except ValueError:
+            if t.endswith("T00:00:00") or t in machine_stamps:
                 continue
-    events.sort()
+            out.append((t, na))
+    return out
+
+
+def sessions_from_events(
+    events: list[tuple[str, str]], gap_seconds: int = 300, min_edits: int = 10
+) -> list[dict[str, Any]]:
+    """Group `(timestamp, naId)` pairs into contiguous working sessions."""
+    from datetime import datetime
+
+    parsed: list[tuple[datetime, str]] = []
+    for t, na in events:
+        try:
+            parsed.append((datetime.fromisoformat(t), na))
+        except ValueError:
+            continue
+    parsed.sort()
 
     out: list[dict[str, Any]] = []
     cur: list[tuple[datetime, str]] = []
-    for ev in events:
+    for ev in parsed:
         if cur and (ev[0] - cur[-1][0]).total_seconds() > gap_seconds:
             if len(cur) >= min_edits:
                 out.append(_session(cur))
@@ -135,9 +175,18 @@ def edit_intensity(
     Interpretation (hypothesis, n=3 agencies): elevated edit counts on
     restricted records indicate *individually adjudicated* restriction;
     flat or inverted counts indicate *categorical* restriction applied
-    wholesale. RG 263 1.04/1.52, RG 111 2.19/4.08, RG 242 1.15/1.01 (inverted;
-    seized foreign records are restricted by category, so nothing is reviewed
-    one at a time).
+    wholesale -- seized foreign records, say, are restricted by category, so
+    nothing is reviewed one at a time.
+
+    .. warning::
+       The published RG 263 / RG 111 / RG 242 ratios are **stale and not
+       reproduced here on purpose.** They were computed before this function
+       stopped counting unreviewed records as adjudicated and stopped counting
+       batch-import stamps as edits, and both corrections move the numbers by
+       unknown amounts -- possibly enough to reverse the RG 242 inversion the
+       hypothesis leans on. Recompute from the v1 shards of all three groups
+       before citing any figure. `docs/FINDINGS.md` carries the old values
+       explicitly marked stale.
 
     `Restricted - Possibly` gets its own `unreviewed` bucket. The whole
     argument here is about *adjudication* effort, and those records are by
@@ -155,6 +204,19 @@ def edit_intensity(
     """
     noise = batch_timestamps(items) if exclude_batches else set()
     buckets: dict[str, list[int]] = defaultdict(list)
+    collect_intensity(items, noise, buckets)
+    return intensity_from_buckets(buckets)
+
+
+def collect_intensity(
+    items: list[dict[str, Any]], noise: set[str], buckets: dict[str, list[int]]
+) -> None:
+    """Fold one shard's per-record edit counts into `buckets`, in place.
+
+    Streaming counterpart to `edit_intensity`: an int per record rather than
+    the record. `noise` must be the *group-wide* batch timestamps -- a
+    shard-local set misses imports spread thinly across a hash partition.
+    """
     for _level, body in schema.iter_v1_descriptions(items):
         r = schema.parse_restriction(body.get("accessRestriction"))
         if r.is_unreviewed:
@@ -163,8 +225,10 @@ def edit_intensity(
             key = "restricted"
         else:
             key = "open" if r.status else "no_status"
-        mods = [t for t in schema.v1_modifications(body) if t not in noise]
-        buckets[key].append(len(mods))
+        buckets[key].append(sum(1 for t in schema.v1_modifications(body) if t not in noise))
+
+
+def intensity_from_buckets(buckets: dict[str, list[int]]) -> dict[str, dict[str, float]]:
     return {
         k: {
             "n": len(v),
