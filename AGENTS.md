@@ -306,11 +306,13 @@ The corpus rewards pattern-hunting and punishes credulity. Every anomaly encount
 
 ### Settled context for RG 263 (survey complete)
 
-1,868 restricted descriptions of 26,858 scanned (~7%). Status: 1,080 Partly / 509 Possibly / 279 Fully. Exemptions: 1,795 (b)(1) National Security, 27 `Other`, 6 (b)(3), 5 JFK Act, 4 (b)(6).
+1,359 adjudicated withholdings of 26,858 scanned (5.6% against 1,359 restricted + 23,118 unrestricted). Status: 1,080 Partly / 279 Fully, plus 509 `Restricted - Possibly` (never reviewed) and 1,872 with no status — both held out of the rate per §4.3. Exemptions: 1,293 (b)(1) National Security, 27 `Other`, 6 (b)(3), 5 JFK Act, 4 (b)(6). Levels: 1,247 fileUnit / 112 series.
 
-The 27 `Other` records: 26 are the CIA's Guatemala operations (PBFORTUNE, PBSUCCESS, PBHISTORY, Lincoln Station, cryptonyms KUHOOK/FJHOPEFUL/Calligeris), naIds 5956115–5956141, most `Top Secret`, most `Restricted - Fully`. Withheld under the **CIA Information Act of 1984** — exempt from FOIA search/review *and* from MDR under E.O. 13526 §3.5(a)(2). **Not FOIA-able; do not advise anyone to file on them.** The 27th is the Nazi War Crimes second release (naId 640447).
+An earlier pass reported 1,868 (~7%) by counting the unreviewed backlog as withheld. Do not reintroduce that: it inflates the numerator by 37% and puts a processing queue inside a secrecy statistic.
 
-Open thread worth pursuing: every one of those 26 carries a note stating that declassified copies of selected documents may appear in the open series *Records Relating to Activities in Guatemala, 1949–1996* (naId 6106938), and that **NARA has never performed a comprehensive review to determine which**. Both sides are described in the catalog. Reconciling them is a tractable, genuinely unanswered research problem.
+The 27 `Other` records: 25 are the CIA's Guatemala operations (PBFORTUNE, PBSUCCESS, PBHISTORY, Lincoln Station, cryptonyms KUHOOK/FJHOPEFUL/Calligeris), naIds 5956115–5956141, most `Top Secret`, most `Restricted - Fully`. Withheld under the **CIA Information Act of 1984** — exempt from FOIA search/review *and* from MDR under E.O. 13526 §3.5(a)(2). **Not FOIA-able; do not advise anyone to file on them.** The other two are the Nazi War Crimes second release (naId 640447) and the *open* Guatemala series (naId 6106938), redacted by CIA before transfer — neither is a statutory exemption, and only the `note` column tells them apart.
+
+Open thread worth pursuing: every one of those 25 carries a note stating that declassified copies of selected documents may appear in the open series *Records Relating to Activities in Guatemala, 1949–1996* (naId 6106938), and that **NARA has never performed a comprehensive review to determine which**. Both sides are described in the catalog. Reconciling them is a tractable, genuinely unanswered research problem.
 
 ---
 

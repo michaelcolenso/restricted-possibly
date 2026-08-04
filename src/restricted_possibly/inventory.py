@@ -27,16 +27,17 @@ class Row:
     status: str | None
     exemptions: str
     securityClassification: str | None
+    note: str
     coverageStart: int | None
     coverageEnd: int | None
     title: str
-    note: str
 
 
 @dataclass
 class Summary:
     group: str
     scanned: int
+    #: Adjudicated withholdings only. `unreviewed` is tracked separately.
     restricted: int
     unrestricted: int
     unreviewed: int
@@ -53,7 +54,13 @@ class Summary:
 
 
 def build(group: str, limit_shards: int | None = None) -> tuple[list[Row], Summary]:
-    """Single streaming pass over a record group."""
+    """Single streaming pass over a record group.
+
+    Rows are *adjudicated* withholdings only -- `Restricted - Fully` and
+    `Restricted - Partly`. `Restricted - Possibly` means "not yet reviewed" and
+    is reported separately as `Summary.unreviewed`; counting a processing
+    backlog as withheld would overstate every rate built on this.
+    """
     rows: list[Row] = []
     status_ct: Counter[str] = Counter()
     exempt_ct: Counter[str] = Counter()
@@ -69,6 +76,12 @@ def build(group: str, limit_shards: int | None = None) -> tuple[list[Row], Summa
         status_ct[r.status] += 1
         if r.status == "Unrestricted":
             unrestricted += 1
+            continue
+        if r.is_unreviewed:
+            # `Restricted - Possibly` is a processing-backlog marker, not a
+            # withholding decision. It stays in `by_status` and `unreviewed`,
+            # and out of the withheld rows -- and so out of both the numerator
+            # and the denominator of `restricted_rate`.
             continue
         if not r.is_restricted:
             continue

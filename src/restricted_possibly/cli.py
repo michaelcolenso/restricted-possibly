@@ -66,9 +66,9 @@ def inventory_cmd(
 
     t = Table("metric", "value")
     t.add_row("scanned", f"{summary.scanned:,}")
-    t.add_row("restricted", f"{summary.restricted:,}")
+    t.add_row("restricted (adjudicated)", f"{summary.restricted:,}")
     t.add_row("unrestricted (denominator)", f"{summary.unrestricted:,}")
-    t.add_row("never reviewed", f"{summary.unreviewed:,}")
+    t.add_row("never reviewed (excluded)", f"{summary.unreviewed:,}")
     t.add_row("status absent (legacy imports)", f"{summary.no_status:,}")
     t.add_row("restricted rate", f"{summary.restricted_rate:.2%}")
     console.print(t)

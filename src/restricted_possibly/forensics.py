@@ -120,12 +120,22 @@ def edit_intensity(items: list[dict[str, Any]]) -> dict[str, dict[str, float]]:
     seized foreign records are restricted by category, so nothing is reviewed
     one at a time).
 
+    `Restricted - Possibly` gets its own `unreviewed` bucket. The whole
+    argument here is about *adjudication* effort, and those records are by
+    definition unadjudicated -- folding them into `restricted` can manufacture,
+    flatten, or invert the signal depending on how big the backlog is.
+
     Do not generalize from a single record group.
     """
     buckets: dict[str, list[int]] = defaultdict(list)
     for _level, body in schema.iter_v1_descriptions(items):
         r = schema.parse_restriction(body.get("accessRestriction"))
-        key = "restricted" if r.is_restricted else ("open" if r.status else "no_status")
+        if r.is_unreviewed:
+            key = "unreviewed"
+        elif r.is_restricted:
+            key = "restricted"
+        else:
+            key = "open" if r.status else "no_status"
         buckets[key].append(len(schema.v1_modifications(body)))
     return {
         k: {

@@ -29,10 +29,10 @@ physical extent, and location.
 That artifact does not exist anywhere. It matters because the hardest part of a FOIA
 request is naming the record you want, and NARA has already published the names.
 
-Running it against RG 263 (CIA) found 1,868 withheld descriptions out of 26,858 — and
-inside them, this:
+Running it against RG 263 (CIA) found 1,359 withheld descriptions out of 26,858 — plus
+509 more that nobody has reviewed yet — and inside them, this:
 
-> 26 series covering the CIA's Guatemala operations — **PBFORTUNE**, **PBSUCCESS**,
+> 25 series covering the CIA's Guatemala operations — **PBFORTUNE**, **PBSUCCESS**,
 > **PBHISTORY**, Lincoln Station, cryptonyms KUHOOK / FJHOPEFUL / Calligeris — described
 > in full, mostly Top Secret, mostly `Restricted - Fully`, and withheld under a
 > restriction code of **`Other`** rather than any FOIA exemption.
@@ -152,7 +152,9 @@ for rec in corpus.stream_group("rg_263", prefilter='"Restricted'):
 and `restricted_rate` excludes never-reviewed and status-absent records from its base.
 This is deliberate: a withholding rate is uninterpretable without its counterpart, and
 enforcing it structurally is what stops an investigation from tunnelling into the secrecy
-fields. (A 10k sample suggested ~5% for RG 263; the full 26,858-record pass gave ~7%.)
+fields. The full 26,858-record pass of RG 263 gives 1,359 adjudicated withholdings
+against 23,118 unrestricted — 5.6% — with 509 never-reviewed and 1,872 status-absent
+records held out of both the numerator and the base.
 
 ### Timestamp forensics (v1 only)
 
