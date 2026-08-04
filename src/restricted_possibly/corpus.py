@@ -137,6 +137,11 @@ def stream_shard(
     abort a 400-shard pass. Pass `stats` to count them: skipped lines are
     invisible in the output but they still shrink every denominator computed
     from it, so a published count needs the failure number alongside it.
+
+    "Unparsable" means shape as well as syntax. A line can be valid JSON and
+    still not be a record -- a bare array, or ``{"record": null}`` -- and both
+    have to fail here rather than downstream, where the first would abort the
+    pass and the second would enter the denominator as a record that isn't one.
     """
     obj = client().get_object(Bucket=BUCKET, Key=key)
     for line in io.TextIOWrapper(obj["Body"], encoding="utf-8", errors="replace"):
@@ -145,8 +150,11 @@ def stream_shard(
         if prefilter is not None and prefilter not in line:
             continue
         try:
-            record = json.loads(line)["record"]
-        except (json.JSONDecodeError, KeyError):
+            parsed = json.loads(line)
+        except json.JSONDecodeError:
+            parsed = None
+        record = parsed.get("record") if isinstance(parsed, dict) else None
+        if not isinstance(record, dict):
             if stats is not None:
                 stats.parse_failures += 1
             continue

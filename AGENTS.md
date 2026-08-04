@@ -345,11 +345,15 @@ Everything here is public-domain federal metadata. Two constraints:
 
 ---
 
-## 9. Working scripts
+## 9. Where the tooling lives
 
-In the working directory, reusable:
+This section used to list four loose scripts (`probe.py`, `diff_restrictions.py`, `edit_history.py`, `inventory.py`) from the originating workspace. **None of them are in this repository** — they were never committed, and the commands that referenced them did not run. Their functionality is in the package:
 
-- `probe.py` — API/proxy probe with backoff; deep-scans a record for keys matching a needle list. Set `API_KEY` to switch to authenticated v2.
-- `diff_restrictions.py` — v1↔v1 snapshot diff; status transitions, opened/closed/exemption-changed.
-- `edit_history.py` — v1 timestamp forensics; creation/modification distributions by restriction bucket, batch-import detection.
-- `inventory.py` — **the main tool.** One streaming pass over a record group: emits restriction inventory CSV + runs the write-once test against a v1 vintage. `python3 inventory.py rg_242 rg242_2021.json`. **Patch it to capture `note` and `securityClassification` before your first real run.**
+| Was | Now |
+|---|---|
+| `python3 inventory.py rg_242 …` | `rp inventory rg_242` / `inventory.build()` — and it already captures `note` and `securityClassification`, so the old "patch it first" warning is obsolete |
+| `edit_history.py` | `rp sessions <shards…>` / `forensics.bursts`, `forensics.sessions`, `forensics.edit_intensity` |
+| `diff_restrictions.py` | `inventory.write_once_check()` |
+| `probe.py` | Not carried over. §1 says not to use the API for bulk work, so a probe for it is not needed; `corpus.peek()` covers reconnaissance against the bucket. |
+
+Ad-hoc analysis belongs in `docs/` as narrative. If you write a script worth keeping, put it in the package with a test rather than describing it here — a documented command that does not exist is worse than no documentation.

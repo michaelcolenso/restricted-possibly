@@ -39,12 +39,17 @@ counterexample would be a significant finding.
 weakest part of an otherwise solid result — a counterexample elsewhere would be
 significant.
 
-### In RG 263, `Other` denotes statutory exemption, not a FOIA exemption
+### In RG 263, `Other` is an escape hatch — the note decides what it means
 
-**Scope: RG 263 only.** The evidence below is one agency's encoding convention. Whether
-`Other` carries the same meaning corpus-wide is untested — §5 rule 3 requires three
-record groups before generalizing, and this has one. Read it as an established fact
-about RG 263 and an open question everywhere else.
+`Other` carries no meaning of its own. It marks a withholding whose basis falls outside
+the controlled vocabulary, and only `accessRestriction.note` says which basis. In RG 263
+that is *usually* a statutory exemption, but not always: of the 27 `Other` records, 25
+cite the CIA Information Act, one cites the Nazi War Crimes disclosure acts, and one is
+an open series redacted before transfer. **Read the note. Never infer from the code.**
+
+**Scope: RG 263 only.** Even the distribution above is one agency's encoding convention.
+Whether `Other` behaves this way corpus-wide is untested — §5 rule 3 requires three
+record groups, and this has one.
 
 RG 263 contains 27 descriptions with restriction code `Other` against 1,293 citing
 FOIA (b)(1). 25 of the 27 are the CIA's Guatemala operations (naIds 5956115–5956141):
@@ -68,8 +73,9 @@ in Guatemala* — the **open** series, `Restricted - Partly` because the CIA red
 some records before transfer. That last one is the open counterpart to the 25 above,
 and is where the reconciliation problem in `OPEN-QUESTIONS.md` lives.
 
-**Falsified by:** an `Other`-coded record elsewhere whose note cites a different basis —
-which would make `Other` a general escape hatch rather than a statutory marker.
+**Falsified by:** an `Other`-coded record whose note cites *no* legal basis at all, or an
+agency where the code is used with no note — either would mean the note is not reliably
+the answer, which is the load-bearing part of this claim.
 **Replicated across: 1 agency.**
 
 ### RG 263 withholding profile (survey complete)
@@ -105,6 +111,10 @@ and now carries `securityClassification` and `note`.
 comparison was made against the old inflated full-pass figure and no longer
 demonstrates the gap it was cited for — the sampling question is open again.
 
+---
+
+## Suggested (insufficient replication)
+
 ### Three separable activity classes in edit timestamps (v1 only)
 
 | Signature | Meaning | Verified instance |
@@ -113,13 +123,19 @@ demonstrates the gap it was cited for — the sampling question is open again.
 | ~45 records, real clock time, seconds apart | Human running a bulk tool | `2015-11-20T17:18:21` ×45 |
 | One per 20–40s sustained for hours | Archivist working a queue | 2018-10-03 09:45→11:12, 85 records |
 
+**One confirmed instance per class, all from RG 263. No denominator.** Nobody has counted
+what fraction of that group's timestamps fall into these three shapes, how many are
+ambiguous, or whether the thresholds (`>50` identical for a batch, `>5` for a tool)
+generalize. The taxonomy is used as a filter throughout `forensics.py`, so it earns its
+keep operationally — but three vivid examples are not a validated classification, and it
+sat under *Established* until this was pointed out.
+
+**To promote it:** classify every timestamp in a full v1 record group, report the
+proportion in each class and the residual that fits none, and repeat in two more groups.
+
 **Falsified by:** a midnight-clustered batch that corresponds to a documented human
 process, or a steady-cadence sequence produced by a script.
 **Constraint:** `recordHistory` exists only in v1 vintages (2021–2022).
-
----
-
-## Suggested (insufficient replication)
 
 ### Edit intensity distinguishes adjudicated from categorical restriction
 
