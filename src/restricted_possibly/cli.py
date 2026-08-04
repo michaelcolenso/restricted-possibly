@@ -104,15 +104,23 @@ def inventory_cmd(
         group, limit_shards or None, redact_personal=not include_personal
     )
 
-    # A partial run never overwrites a full one: an expensive complete inventory
-    # and a 3-shard smoke test are indistinguishable once written, so the limit
-    # goes in the filename.
-    suffix = f".partial-{limit_shards}shards" if limit_shards else ""
+    # `samples` -- not `limit_shards` -- decides whether this run is partial.
+    # `--limit-shards 400` on a 400-shard group reads every record, so calling
+    # it a sample would be as wrong as calling a real sample complete: the
+    # counts are a full survey, they would be filed under a `.partial` name
+    # beside a stale full run, and the summary would carry a limit implying
+    # something was left out.
+    suffix = f".partial-{limit_shards}shards" if samples else ""
     path = inventory.write_csv(rows, out / f"withheld_{group}{suffix}.csv")
-    if limit_shards:
+    if samples:
         console.print(
-            f"[yellow]partial run: {limit_shards} shards only. These counts are a sample, "
-            "not a survey.[/yellow]"
+            f"[yellow]partial run: {limit_shards} of {len(sh)} shards. These counts are "
+            "a sample, not a survey.[/yellow]"
+        )
+    elif limit_shards:
+        console.print(
+            f"[cyan]--limit-shards {limit_shards} covers all {len(sh)} shards: this is a "
+            "complete pass, recorded as one.[/cyan]"
         )
 
     t = Table("metric", "value")
@@ -157,7 +165,9 @@ def inventory_cmd(
             )
     console.print(f"wrote [green]{path}[/green] ({len(rows)} rows)")
     (out / f"summary_{group}{suffix}.json").write_text(
-        json.dumps({**summary.__dict__, "limit_shards": limit_shards or None}, indent=2)
+        json.dumps(
+            {**summary.__dict__, "limit_shards": limit_shards if samples else None}, indent=2
+        )
     )
 
 

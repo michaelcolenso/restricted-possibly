@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 from typer.testing import CliRunner
 
 from restricted_possibly import cli, corpus, inventory
@@ -42,8 +44,15 @@ def test_inventory_refuses_a_group_with_no_shards(monkeypatch):
 
 
 def test_partial_run_does_not_overwrite_a_full_inventory(monkeypatch, tmp_path):
-    """A 3-shard smoke test and an expensive full survey must not collide."""
-    monkeypatch.setattr(corpus, "shards", lambda *a, **k: [corpus.Shard("k", 1)])
+    """A 3-shard smoke test and an expensive full survey must not collide.
+
+    The group needs more than 3 shards for `--limit-shards 3` to be a real
+    sample -- at or above the shard count it is a complete pass and is
+    recorded as one.
+    """
+    monkeypatch.setattr(
+        corpus, "shards", lambda *a, **k: [corpus.Shard(f"k{i}", 1) for i in range(5)]
+    )
     monkeypatch.setattr(inventory, "build", lambda *a, **k: ([], _summary()))
 
     full = runner.invoke(cli.app, ["inventory", "rg_263", "--out", str(tmp_path)])
@@ -121,3 +130,42 @@ def test_negative_shard_limits_are_rejected(monkeypatch):
     result = runner.invoke(cli.app, ["inventory", "rg_263", "--limit-shards", "-1"])
     assert result.exit_code != 0
     assert not called
+
+
+def test_a_full_size_limit_is_recorded_as_a_complete_pass(monkeypatch, tmp_path):
+    """`--limit-shards 3` on a 3-shard group reads everything.
+
+    Calling that a sample is as wrong as calling a real sample complete: the
+    counts are a full survey, and a `.partial` name would file them beside a
+    stale full run while the summary implied something was left out.
+    """
+    monkeypatch.setattr(
+        corpus, "shards", lambda *a, **k: [corpus.Shard(f"k{i}", 1) for i in range(3)]
+    )
+    monkeypatch.setattr(inventory, "build", lambda *a, **k: ([], _summary()))
+
+    result = runner.invoke(
+        cli.app, ["inventory", "rg_263", "--out", str(tmp_path), "--limit-shards", "3"]
+    )
+    assert result.exit_code == 0
+
+    names = sorted(p.name for p in tmp_path.iterdir())
+    assert names == ["summary_rg_263.json", "withheld_rg_263.csv"]
+    assert json.loads((tmp_path / "summary_rg_263.json").read_text())["limit_shards"] is None
+
+
+def test_a_real_sample_is_still_recorded_as_partial(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        corpus, "shards", lambda *a, **k: [corpus.Shard(f"k{i}", 1) for i in range(3)]
+    )
+    monkeypatch.setattr(inventory, "build", lambda *a, **k: ([], _summary()))
+
+    result = runner.invoke(
+        cli.app, ["inventory", "rg_263", "--out", str(tmp_path), "--limit-shards", "2"]
+    )
+    assert result.exit_code == 0
+
+    names = sorted(p.name for p in tmp_path.iterdir())
+    assert names == ["summary_rg_263.partial-2shards.json", "withheld_rg_263.partial-2shards.csv"]
+    summary = json.loads((tmp_path / "summary_rg_263.partial-2shards.json").read_text())
+    assert summary["limit_shards"] == 2

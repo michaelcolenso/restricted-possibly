@@ -130,7 +130,7 @@ demonstrates the gap it was cited for — the sampling question is open again.
 | Signature | Meaning | Verified instance |
 |---|---|---|
 | Identical stamp, `T00:00:00`, high count | Automated batch import | `2013-06-27T00:00:00` ×1,835 |
-| ~45 records, real clock time, seconds apart | Human running a bulk tool | `2015-11-20T17:18:21` ×45 |
+| ≥5 records sharing one identical real-clock stamp | Human running a bulk tool | `2015-11-20T17:18:21` ×45 |
 | One per 20–40s sustained for hours | Hand-paced editing (a *window*, not an identified person — v1 has no actor field, so concurrent editors merge) | 2018-10-03 09:45→11:12, 85 records |
 
 **One confirmed instance per class, all from RG 263. No denominator.** Nobody has counted
