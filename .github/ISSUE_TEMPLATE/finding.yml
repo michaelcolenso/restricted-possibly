@@ -1,0 +1,39 @@
+name: Finding
+description: Report a pattern discovered in the corpus
+labels: ["finding"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Findings need a denominator, a replication, and a falsification condition.
+        This corpus readily produces compelling patterns that turn out to be bulk
+        imports — see the refutation table in the README.
+  - type: textarea
+    id: claim
+    attributes:
+      label: Claim
+      description: What do you believe is true?
+    validations: {required: true}
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence + denominator
+      description: Counts, and the unrestricted/ordinary baseline they're measured against.
+    validations: {required: true}
+  - type: input
+    id: replication
+    attributes:
+      label: Record groups replicated across
+      placeholder: "rg_263, rg_242, rg_111"
+    validations: {required: true}
+  - type: textarea
+    id: boring
+    attributes:
+      label: Boring explanations ruled out
+      description: Bulk import? Schema migration? Grant cycle? One archivist's project?
+    validations: {required: true}
+  - type: textarea
+    id: falsify
+    attributes:
+      label: What would falsify this?
+    validations: {required: true}

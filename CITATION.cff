@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+title: "restricted-possibly: survey tooling for the National Archives Catalog corpus"
+message: "If you use this software or its findings, please cite both this repository and the underlying NARA dataset."
+type: software
+authors:
+  - name: "restricted-possibly contributors"
+repository-code: "https://github.com/OWNER/restricted-possibly"
+license: MIT
+keywords:
+  - national archives
+  - FOIA
+  - declassification
+  - open data
+  - archival metadata
+references:
+  - type: database
+    title: "National Archives Catalog"
+    institution:
+      name: "National Archives and Records Administration"
+    url: "https://registry.opendata.aws/nara-national-archives-catalog"
