@@ -205,3 +205,35 @@ def test_redaction_can_be_turned_off_deliberately(monkeypatch):
 
     assert s.personal_redacted == 0
     assert row.title == "record 3"
+
+
+def test_by_exemption_counts_descriptions_not_occurrences(monkeypatch):
+    """RG 263 naId 305945 cites (b)(1) twice, under two classifications.
+
+    The row keeps both entries; the summary must count the description once,
+    or `by_exemption` cannot be read against `restricted`.
+    """
+    rec = _rec("305945", "Restricted - Partly")
+    rec["levelOfDescription"] = "series"
+    rec["accessRestriction"] = {
+        "status": "Restricted - Partly",
+        "specificAccessRestrictions": [
+            {
+                "restriction": "FOIA (b)(1) National Security",
+                "securityClassification": "Top Secret",
+            },
+            {
+                "restriction": "FOIA (b)(1) National Security",
+                "securityClassification": "Restricted Data/Formerly Restricted Data",
+            },
+        ],
+    }
+    monkeypatch.setattr(corpus, "stream_group", lambda *a, **k: iter([rec]))
+
+    (row,), s = inventory.build("rg_263")
+
+    assert s.by_exemption["FOIA (b)(1) National Security"] == 1
+    assert s.restricted == 1  # so the two are comparable
+    # The row is untouched -- both classifications survive.
+    assert row.exemptions == "FOIA (b)(1) National Security; FOIA (b)(1) National Security"
+    assert row.securityClassification == "Top Secret; Restricted Data/Formerly Restricted Data"

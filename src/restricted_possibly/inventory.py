@@ -120,7 +120,13 @@ def build(
             continue
 
         level_ct[rec.get("levelOfDescription") or "?"] += 1
-        for e in r.exemptions:
+        # De-duplicated: `by_exemption` counts *descriptions* citing an
+        # exemption, so it can be read against `restricted`. A description can
+        # list the same restriction twice under different classifications --
+        # RG 263 naId 305945 cites (b)(1) once as Top Secret and once as
+        # Restricted Data -- and counting occurrences made that one record two.
+        # The row keeps every entry; only the summary de-duplicates.
+        for e in dict.fromkeys(r.exemptions):
             exempt_ct[e] += 1
         rgnum = next(
             (

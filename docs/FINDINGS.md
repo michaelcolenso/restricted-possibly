@@ -54,7 +54,7 @@ an open series redacted before transfer. **Read the note. Never infer from the c
 Whether `Other` behaves this way corpus-wide is untested — §5 rule 3 requires three
 record groups, and this has one.
 
-RG 263 contains 27 descriptions with restriction code `Other` against 1,293 citing
+RG 263 contains 27 descriptions with restriction code `Other` against 1,292 citing
 FOIA (b)(1). 25 of the 27 are the CIA's Guatemala operations (naIds 5956115–5956141):
 PBFORTUNE, PBSUCCESS, PBHISTORY, Lincoln Station files, cryptonyms KUHOOK / FJHOPEFUL /
 Calligeris. Mostly `Top Secret`, mostly `Restricted - Fully`, no coverage dates.
@@ -89,7 +89,7 @@ the answer, which is the load-bearing part of this claim.
 
 | Status | n | | Exemption (adjudicated only) | n |
 |---|---:|---|---|---:|
-| Restricted - Partly | 1,080 | | FOIA (b)(1) National Security | 1,293 |
+| Restricted - Partly | 1,080 | | FOIA (b)(1) National Security | 1,292 |
 | Restricted - Fully | 279 | | Other | 27 |
 | **Adjudicated total** | **1,359** | | FOIA (b)(3) Statute | 6 |
 | Restricted - Possibly (unreviewed) | 509 | | JFK Assassination Records Collection Act | 5 |
@@ -124,13 +124,16 @@ demonstrates the gap it was cited for — the sampling question is open again.
 |---|---|---|
 | Identical stamp, `T00:00:00`, high count | Automated batch import | `2013-06-27T00:00:00` ×1,835 |
 | ~45 records, real clock time, seconds apart | Human running a bulk tool | `2015-11-20T17:18:21` ×45 |
-| One per 20–40s sustained for hours | Archivist working a queue | 2018-10-03 09:45→11:12, 85 records |
+| One per 20–40s sustained for hours | Hand-paced editing (a *window*, not an identified person — v1 has no actor field, so concurrent editors merge) | 2018-10-03 09:45→11:12, 85 records |
 
 **One confirmed instance per class, all from RG 263. No denominator.** Nobody has counted
 what fraction of that group's timestamps fall into these three shapes, how many are
-ambiguous, or whether the thresholds (`>50` identical for a batch, `>5` for a tool)
-generalize. The taxonomy is used as a filter throughout `forensics.py`, so it earns its
-keep operationally — but three vivid examples are not a validated classification, and it
+ambiguous, or whether the thresholds generalize — those are **≥50** identical midnight
+stamps for a batch and **≥5** identical stamps for a tool, both inclusive, as
+`forensics.BATCH_THRESHOLD` and `TOOL_THRESHOLD`.
+
+The taxonomy is used as a filter throughout `forensics.py`, so it earns its keep
+operationally — but three vivid examples are not a validated classification, and it
 sat under *Established* until this was pointed out.
 
 **To promote it:** classify every timestamp in a full v1 record group, report the

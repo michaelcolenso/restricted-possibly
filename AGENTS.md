@@ -272,8 +272,8 @@ Restriction status does **not** mutate. Four independent tests on RG 263:
 
 | Signature | Meaning |
 |---|---|
-| Many records, identical timestamp, `T00:00:00` | Automated batch import |
-| Clusters of ~45 records at real times, seconds apart | Human running a bulk tool interactively |
+| **≥50** records sharing an identical `T00:00:00` stamp | Automated batch import |
+| **≥5** records sharing an identical real-clock stamp | Human running a bulk tool interactively |
 | Steady one-record-per-20–40s over hours | Hand-paced editing — a *window*, not an identified person: v1 has no actor field, so concurrent editors merge into one window |
 
 Verified examples: `2013-06-27T00:00:00` × 1,835 records (batch); `2015-11-20T17:18:21` × 45 (tool); `2018-10-03` 09:45→11:12, 85 records at ~20–40s intervals (human).
@@ -312,7 +312,7 @@ The corpus rewards pattern-hunting and punishes credulity. Every anomaly encount
 
 ### Settled context for RG 263 (survey complete)
 
-1,359 adjudicated withholdings of 26,858 scanned (5.6% against 1,359 restricted + 23,118 unrestricted). Status: 1,080 Partly / 279 Fully, plus 509 `Restricted - Possibly` (never reviewed) and 1,872 with no status — both held out of the rate per §4.3. Exemptions: 1,293 (b)(1) National Security, 27 `Other`, 6 (b)(3), 5 JFK Act, 4 (b)(6). Levels: 1,247 fileUnit / 112 series.
+1,359 adjudicated withholdings of 26,858 scanned (5.6% against 1,359 restricted + 23,118 unrestricted). Status: 1,080 Partly / 279 Fully, plus 509 `Restricted - Possibly` (never reviewed) and 1,872 with no status — both held out of the rate per §4.3. Exemptions: 1,292 (b)(1) National Security, 27 `Other`, 6 (b)(3), 5 JFK Act, 4 (b)(6). Levels: 1,247 fileUnit / 112 series.
 
 An earlier pass reported 1,868 (~7%) by counting the unreviewed backlog as withheld. Do not reintroduce that: it inflates the numerator by 37% and puts a processing queue inside a secrecy statistic.
 
