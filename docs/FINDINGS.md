@@ -131,6 +131,12 @@ reviewed one at a time.
 **n = 3 agencies, and one of them inverts.** Plausible, not established. Do not
 generalize. **Falsified by:** an agency with known per-item review showing a flat ratio.
 
+⚠️ **These ratios are stale and should not be cited until recomputed.** They were
+produced before two corrections to `forensics.edit_intensity`: unreviewed records were
+being counted as adjudicated, and batch-import timestamps were being counted as edits.
+Both push in unknown directions — the RG 242 inversion in particular could be an artifact
+of either. Recomputing needs the v1 backup shards for all three record groups.
+
 ### Agencies have distinguishable withholding signatures
 
 RG 263 is ~98% (b)(1) National Security. A State Department sample (n=2,109) showed

@@ -4,7 +4,7 @@ Tractable problems on public data. Roughly ordered by ratio of interest to effor
 
 ## 1. The Guatemala reconciliation
 
-Every one of the 26 `Other`-coded PBSUCCESS-family series (naIds 5956115–5956141) carries
+Every one of the 25 `Other`-coded PBSUCCESS-family series (naIds 5956115–5956141) carries
 this general note:
 
 > Copies of selected documents relating to PBFORTUNE, PBSUCCESS, and PBHISTORY from this

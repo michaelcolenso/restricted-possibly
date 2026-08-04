@@ -278,7 +278,7 @@ Verified examples: `2013-06-27T00:00:00` × 1,835 records (batch); `2015-11-20T1
 
 Use the batch signature as a **noise filter** — bulk imports dominate raw edit counts and mean nothing. Human-edited restricted records are the high-signal subset.
 
-Secondary finding: mean modifications per record differed by restriction status, but **inconsistently across agencies** — RG 263 1.04 open / 1.52 restricted, RG 111 2.19 / 4.08, RG 242 1.15 / 1.01 (inverted). Working interpretation: elevated edit counts indicate *individually adjudicated* restriction; flat or inverted counts indicate *categorical* restriction applied wholesale. RG 242 (seized foreign records) restricts by category, hence no per-record review. **This is a hypothesis, not a result — n=3 agencies.**
+Secondary finding: mean modifications per record differed by restriction status, but **inconsistently across agencies** — RG 263 1.04 open / 1.52 restricted, RG 111 2.19 / 4.08, RG 242 1.15 / 1.01 (inverted). Working interpretation: elevated edit counts indicate *individually adjudicated* restriction; flat or inverted counts indicate *categorical* restriction applied wholesale. RG 242 (seized foreign records) restricts by category, hence no per-record review. **This is a hypothesis, not a result — n=3 agencies.** ⚠️ It is also **stale**: those numbers were computed before `edit_intensity` stopped counting unreviewed records as adjudicated and stopped counting batch-import stamps as edits. Recompute from the v1 shards before citing them.
 
 ---
 

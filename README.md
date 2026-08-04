@@ -42,7 +42,7 @@ Running it against RG 263 (CIA) found 1,359 withheld descriptions out of 26,858 
 > records from FOIA search and review *and* from Mandatory Declassification Review under
 > E.O. 13526 §3.5(a)(2). **Both doors are closed by statute.** Do not file on them.
 >
-> Every one of those 26 also carries a note stating that declassified copies of selected
+> Every one of those 25 also carries a note stating that declassified copies of selected
 > documents may appear in the open series *Records Relating to Activities in Guatemala,
 > 1949–1996* (naId 6106938) — and that **NARA has never performed a comprehensive review
 > to determine which.** Both sides are described in the catalog. Reconciling them is an

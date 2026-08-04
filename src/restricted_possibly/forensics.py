@@ -64,14 +64,29 @@ def batch_timestamps(items: list[dict[str, Any]], threshold: int = 50) -> set[st
 
 
 def sessions(
-    items: list[dict[str, Any]], gap_seconds: int = 300, min_edits: int = 10
+    items: list[dict[str, Any]],
+    gap_seconds: int = 300,
+    min_edits: int = 10,
+    max_identical: int = 5,
 ) -> list[dict[str, Any]]:
     """Contiguous human working sessions (non-midnight, steady cadence).
 
     Returns dicts with start, end, count and the naIds touched -- i.e. what one
     person did in one sitting.
+
+    Two machine signatures are removed first, not one. Midnight stamps are
+    batch imports. Non-midnight stamps repeated more than `max_identical`
+    times are someone running a bulk tool -- the verified `2015-11-20T17:18:21`
+    x45 event is the type case, and left in it reads as a 45-edit "session" at
+    zero-second intervals, which is the opposite of the hand-worked cadence
+    this function claims to find.
     """
     from datetime import datetime
+
+    ct: Counter[str] = Counter()
+    for _level, body in schema.iter_v1_descriptions(items):
+        ct.update(schema.v1_modifications(body))
+    tool_stamps = {t for t, n in ct.items() if n > max_identical}
 
     events: list[tuple[datetime, str]] = []
     for _level, body in schema.iter_v1_descriptions(items):
@@ -79,6 +94,8 @@ def sessions(
         for t in schema.v1_modifications(body):
             if t.endswith("T00:00:00"):
                 continue  # machine
+            if t in tool_stamps:
+                continue  # bulk tool, not a person
             try:
                 events.append((datetime.fromisoformat(t), na))
             except ValueError:
@@ -110,7 +127,9 @@ def _session(events) -> dict[str, Any]:
     }
 
 
-def edit_intensity(items: list[dict[str, Any]]) -> dict[str, dict[str, float]]:
+def edit_intensity(
+    items: list[dict[str, Any]], exclude_batches: bool = True
+) -> dict[str, dict[str, float]]:
     """Mean modifications per record, split by restriction bucket.
 
     Interpretation (hypothesis, n=3 agencies): elevated edit counts on
@@ -125,8 +144,16 @@ def edit_intensity(items: list[dict[str, Any]]) -> dict[str, dict[str, float]]:
     definition unadjudicated -- folding them into `restricted` can manufacture,
     flatten, or invert the signal depending on how big the backlog is.
 
+    Batch-import timestamps are excluded by default. A single midnight import
+    can contribute thousands of modifications whose status composition has
+    nothing to do with adjudication -- the 2013-06-27 event alone touched 1,835
+    records -- so counting them measures which records happened to be in an
+    import, not how much review anyone did. Set `exclude_batches=False` only to
+    reproduce a raw count.
+
     Do not generalize from a single record group.
     """
+    noise = batch_timestamps(items) if exclude_batches else set()
     buckets: dict[str, list[int]] = defaultdict(list)
     for _level, body in schema.iter_v1_descriptions(items):
         r = schema.parse_restriction(body.get("accessRestriction"))
@@ -136,7 +163,8 @@ def edit_intensity(items: list[dict[str, Any]]) -> dict[str, dict[str, float]]:
             key = "restricted"
         else:
             key = "open" if r.status else "no_status"
-        buckets[key].append(len(schema.v1_modifications(body)))
+        mods = [t for t in schema.v1_modifications(body) if t not in noise]
+        buckets[key].append(len(mods))
     return {
         k: {
             "n": len(v),
