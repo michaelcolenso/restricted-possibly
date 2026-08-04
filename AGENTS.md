@@ -62,7 +62,7 @@ Mid-project the investigation was steered toward "covert" angles. That steer was
 
 Note the shape of it: the individual hypotheses were held loosely and killed on contact, exactly as intended. The *frame* was never once put up for review. Loose hypotheses inside a locked frame still produces tunnel vision.
 
-**The correction: "covert" is an inference style, not a subject area.** The most covert result in the entire project touched no secrecy field at all — reading `recordHistory` timestamps to reconstruct an individual archivist's 90-minute working session. Edit timestamps are the most tedious metadata in the corpus. Read sideways, they exposed staffing, workflow, and three distinguishable classes of human and machine activity.
+**The correction: "covert" is an inference style, not a subject area.** The most covert result in the entire project touched no secrecy field at all — reading `recordHistory` timestamps to reconstruct a 90-minute window of hand-paced editing. (A window, not a person — v1 has no actor field, so concurrent editors merge. See §4.5.) Edit timestamps are the most tedious metadata in the corpus. Read sideways, they exposed staffing, workflow, and three distinguishable classes of human and machine activity.
 
 That same move generalizes everywhere:
 
@@ -274,7 +274,7 @@ Restriction status does **not** mutate. Four independent tests on RG 263:
 |---|---|
 | Many records, identical timestamp, `T00:00:00` | Automated batch import |
 | Clusters of ~45 records at real times, seconds apart | Human running a bulk tool interactively |
-| Steady one-record-per-20–40s over hours | Archivist hand-working a queue |
+| Steady one-record-per-20–40s over hours | Hand-paced editing — a *window*, not an identified person: v1 has no actor field, so concurrent editors merge into one window |
 
 Verified examples: `2013-06-27T00:00:00` × 1,835 records (batch); `2015-11-20T17:18:21` × 45 (tool); `2018-10-03` 09:45→11:12, 85 records at ~20–40s intervals (human).
 

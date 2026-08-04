@@ -93,3 +93,14 @@ def test_large_group_is_allowed_deliberately_or_when_sampled(monkeypatch, tmp_pa
         cli.app, ["inventory", "rg_64", "--out", str(tmp_path), "--limit-shards", "2"]
     )
     assert sampled.exit_code == 0
+
+
+def test_limit_shards_at_or_above_the_shard_count_does_not_bypass_the_guard(monkeypatch):
+    """`shards(group)[:400]` on a 400-shard group is the whole 180 GB of it."""
+    big = [corpus.Shard(f"k{i}", 500_000_000) for i in range(400)]
+    monkeypatch.setattr(corpus, "shards", lambda *a, **k: big)
+    monkeypatch.setattr(inventory, "build", lambda *a, **k: ([], _summary()))
+
+    for limit in ("400", "500"):
+        result = runner.invoke(cli.app, ["inventory", "rg_64", "--limit-shards", limit])
+        assert result.exit_code == 1, f"--limit-shards {limit} slipped past the guard"

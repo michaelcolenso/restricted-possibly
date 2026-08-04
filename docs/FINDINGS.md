@@ -34,10 +34,13 @@ whether another record group mutates status is exactly the open question — so 
 `write_once_check` elsewhere before concluding a monitor is pointless there. A
 counterexample would be a significant finding.
 
-**Falsified by:** any naId whose status changes between vintages in any record group.
-`inventory.write_once_check` tests this. **Replicated across: 1 agency.** This is the
-weakest part of an otherwise solid result — a counterexample elsewhere would be
-significant.
+**Falsified by:** any **RG 263** naId whose status changes between vintages. That is what
+this claim asserts, so that is what can break it.
+
+A status change in another record group is *not* a falsifier — it leaves the RG 263 result
+standing and refutes only the corpus-wide generalization nobody is entitled to yet. It
+would still be a significant finding, and it is the single most useful thing to go looking
+for. `inventory.write_once_check` tests either case. **Replicated across: 1 agency.**
 
 ### In RG 263, `Other` is an escape hatch — the note decides what it means
 

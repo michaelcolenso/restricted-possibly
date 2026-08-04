@@ -87,8 +87,12 @@ def inventory_cmd(
     # interruption 170 GB into RG 64 costs the whole run. Until checkpointing
     # exists, refuse the groups where that bill is unaffordable rather than
     # letting someone discover it at the end.
+    # `--limit-shards N` only counts as a sample if it actually samples:
+    # `shards(group)[:N]` with N >= len(sh) is the whole group, and would slip
+    # a full 180 GB pass past this guard while labelling the output partial.
     gb = sum(s.size for s in sh) / 1e9
-    if gb > LARGE_GROUP_GB and not (limit_shards or allow_large):
+    samples = 0 < limit_shards < len(sh)
+    if gb > LARGE_GROUP_GB and not (samples or allow_large):
         console.print(
             f"[red]{group} is {gb:.1f} GB across {len(sh)} shards and this scan has no "
             f"checkpointing[/red] -- an interruption at any point loses everything. "

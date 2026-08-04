@@ -189,3 +189,28 @@ def test_group_wide_counts_catch_a_batch_that_hides_in_every_shard():
     for s in shards:
         counts += forensics.timestamp_counts(s)
     assert forensics.batch_timestamps_from_counts(counts) == {"2013-06-27T00:00:00"}
+
+
+def test_batch_boundary_is_the_same_for_filtering_and_labelling():
+    """At exactly 50, the filter dropped the event and the label kept it."""
+    stamp = "2013-06-27T00:00:00"
+    counts = Counter({stamp: forensics.BATCH_THRESHOLD})
+
+    (burst,) = forensics.bursts_from_counts(counts)
+    assert burst.classification == "automated batch import"
+    assert forensics.batch_timestamps_from_counts(counts) == {stamp}
+
+    below = Counter({stamp: forensics.BATCH_THRESHOLD - 1})
+    (burst,) = forensics.bursts_from_counts(below)
+    assert burst.classification != "automated batch import"
+    assert forensics.batch_timestamps_from_counts(below) == set()
+
+
+def test_tool_boundary_is_the_same_for_labelling_and_session_exclusion():
+    stamp = "2015-11-20T17:18:21"
+    at = Counter({stamp: forensics.TOOL_THRESHOLD})
+    (burst,) = forensics.bursts_from_counts(at)
+    assert burst.classification == "interactive bulk tool"
+
+    items = _stamped(*[(None, [stamp]) for _ in range(forensics.TOOL_THRESHOLD)])
+    assert forensics.sessions(items, min_edits=1) == []  # excluded, not a person

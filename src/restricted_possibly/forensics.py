@@ -12,12 +12,16 @@ Signature                                        Meaning
 ===============================================  ==========================
 Many records, identical stamp, ``T00:00:00``     Automated batch import
 Clusters of ~45, real clock time, seconds apart  Human running a bulk tool
-One record per 20-40s, sustained for hours       Archivist working a queue
+One record per 20-40s, sustained for hours       Hand-paced editing
 ===============================================  ==========================
 
 Verified instances: ``2013-06-27T00:00:00`` x1835 (batch);
 ``2015-11-20T17:18:21`` x45 (tool); 2018-10-03 09:45->11:12, 85 records at
-20-40s intervals (human).
+20-40s intervals (hand-paced).
+
+The third class separates *human* from *machine* cadence. It does not
+identify a human: v1 carries no actor field, so concurrent editors are
+indistinguishable from one editor working longer. See `sessions`.
 
 Use the batch signature as a **noise filter**. Bulk imports dominate raw edit
 counts and mean nothing; hand-edited records are the high-signal subset.
@@ -31,6 +35,16 @@ from typing import Any
 
 from . import schema
 
+#: A midnight timestamp shared by at least this many records is a batch import.
+#: One constant, used by both the filter and the label -- when they disagreed,
+#: an event of exactly 50 was dropped from `edit_intensity` as machine noise
+#: while `Burst.classification` still called it a manual edit.
+BATCH_THRESHOLD = 50
+
+#: Identical non-midnight stamps at or above this count are one bulk-tool run,
+#: not a person typing. Shared by `Burst.classification` and `sessions`.
+TOOL_THRESHOLD = 5
+
 
 @dataclass
 class Burst:
@@ -43,9 +57,9 @@ class Burst:
 
     @property
     def classification(self) -> str:
-        if self.is_midnight and self.count > 50:
+        if self.is_midnight and self.count >= BATCH_THRESHOLD:
             return "automated batch import"
-        if self.count > 5:
+        if self.count >= TOOL_THRESHOLD:
             return "interactive bulk tool"
         return "manual edit"
 
@@ -66,22 +80,24 @@ def timestamp_counts(items: list[dict[str, Any]]) -> Counter[str]:
     return ct
 
 
-def bursts_from_counts(counts: Counter[str], min_count: int = 5) -> list[Burst]:
+def bursts_from_counts(counts: Counter[str], min_count: int = TOOL_THRESHOLD) -> list[Burst]:
     """Identical-to-the-second timestamps, descending by frequency."""
     return [Burst(t, n) for t, n in counts.most_common() if n >= min_count]
 
 
-def batch_timestamps_from_counts(counts: Counter[str], threshold: int = 50) -> set[str]:
+def batch_timestamps_from_counts(
+    counts: Counter[str], threshold: int = BATCH_THRESHOLD
+) -> set[str]:
     """Timestamps to treat as machine noise when filtering."""
     return {b.timestamp for b in bursts_from_counts(counts, threshold) if b.is_midnight}
 
 
-def bursts(items: list[dict[str, Any]], min_count: int = 5) -> list[Burst]:
+def bursts(items: list[dict[str, Any]], min_count: int = TOOL_THRESHOLD) -> list[Burst]:
     """Single-shard convenience. For a whole group, fold `timestamp_counts`."""
     return bursts_from_counts(timestamp_counts(items), min_count)
 
 
-def batch_timestamps(items: list[dict[str, Any]], threshold: int = 50) -> set[str]:
+def batch_timestamps(items: list[dict[str, Any]], threshold: int = BATCH_THRESHOLD) -> set[str]:
     """Single-shard convenience. For a whole group, fold `timestamp_counts`."""
     return batch_timestamps_from_counts(timestamp_counts(items), threshold)
 
@@ -90,22 +106,29 @@ def sessions(
     items: list[dict[str, Any]],
     gap_seconds: int = 300,
     min_edits: int = 10,
-    max_identical: int = 5,
+    max_identical: int = TOOL_THRESHOLD,
 ) -> list[dict[str, Any]]:
-    """Contiguous human working sessions (non-midnight, steady cadence).
+    """Contiguous **activity windows** of hand-paced editing.
 
-    Returns dicts with start, end, count and the naIds touched -- i.e. what one
-    person did in one sitting.
+    Returns dicts with start, end, count and the naIds touched.
+
+    .. warning::
+       A window is not a person. `recordHistory` records *when* a record was
+       modified and never *by whom* -- there is no actor field anywhere in v1
+       -- so these are grouped by time alone. Two archivists working the same
+       afternoon within `gap_seconds` of each other merge into one window, and
+       the result would report their combined edits as a single sitting. Read
+       a window as "the desk was busy," not "someone was at it," and do not
+       build staffing conclusions on the count of windows.
 
     Two machine signatures are removed first, not one. Midnight stamps are
-    batch imports. Non-midnight stamps repeated more than `max_identical`
-    times are someone running a bulk tool -- the verified `2015-11-20T17:18:21`
-    x45 event is the type case, and left in it reads as a 45-edit "session" at
-    zero-second intervals, which is the opposite of the hand-worked cadence
-    this function claims to find.
+    batch imports. Non-midnight stamps repeated `max_identical` times or more
+    are one bulk-tool run -- the verified `2015-11-20T17:18:21` x45 event is
+    the type case, and left in it reads as a 45-edit window at zero-second
+    intervals, which is the opposite of the hand-worked cadence this looks for.
     """
     counts = timestamp_counts(items)
-    machine = {t for t, n in counts.items() if n > max_identical}
+    machine = {t for t, n in counts.items() if n >= max_identical}
     return sessions_from_events(collect_events(items, machine), gap_seconds, min_edits)
 
 
@@ -131,7 +154,11 @@ def collect_events(items: list[dict[str, Any]], machine_stamps: set[str]) -> lis
 def sessions_from_events(
     events: list[tuple[str, str]], gap_seconds: int = 300, min_edits: int = 10
 ) -> list[dict[str, Any]]:
-    """Group `(timestamp, naId)` pairs into contiguous working sessions."""
+    """Group `(timestamp, naId)` pairs into contiguous activity windows.
+
+    Time-only grouping -- see the warning in `sessions` about what a window
+    does and does not tell you.
+    """
     from datetime import datetime
 
     parsed: list[tuple[datetime, str]] = []
