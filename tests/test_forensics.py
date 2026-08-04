@@ -310,3 +310,37 @@ def test_a_repeated_stamp_contributes_one_event_to_a_window():
     )
     (window,) = forensics.sessions(items, min_edits=10)
     assert window["count"] == 10  # not 12
+
+
+def test_edit_intensity_accepts_group_wide_batch_stamps():
+    """Shard-local batch detection is empty exactly when it matters.
+
+    A group-wide import lands ~5 records per hash shard, clearing no
+    threshold locally, so a single-shard call counts it as human work. The
+    caller must be able to hand in the group's batch stamps.
+    """
+    batch = "2013-06-27T00:00:00"
+    # One shard's slice of a group-wide import: far below BATCH_THRESHOLD here.
+    shard = _stamped(
+        *[("Unrestricted", [batch]) for _ in range(4)],
+        ("Restricted - Fully", [batch, "2018-10-03T09:45:00"]),
+    )
+
+    assert forensics.batch_timestamps(shard) == set()  # invisible shard-locally
+
+    local = forensics.edit_intensity(shard)
+    assert local["open"]["mean_mods"] == 1.0  # the import counted as work
+    assert local["restricted"]["mean_mods"] == 2.0
+
+    group_wide = forensics.edit_intensity(shard, batch_stamps={batch})
+    assert group_wide["open"]["mean_mods"] == 0.0
+    assert group_wide["restricted"]["mean_mods"] == 1.0
+
+
+def test_explicit_batch_stamps_are_ignored_when_not_excluding():
+    raw = forensics.edit_intensity(
+        _stamped(("Unrestricted", ["2013-06-27T00:00:00"])),
+        exclude_batches=False,
+        batch_stamps={"2013-06-27T00:00:00"},
+    )
+    assert raw["open"]["mean_mods"] == 1.0

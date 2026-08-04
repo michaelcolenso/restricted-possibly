@@ -232,7 +232,9 @@ def _session(events) -> dict[str, Any]:
 
 
 def edit_intensity(
-    items: list[dict[str, Any]], exclude_batches: bool = True
+    items: list[dict[str, Any]],
+    exclude_batches: bool = True,
+    batch_stamps: set[str] | None = None,
 ) -> dict[str, dict[str, float]]:
     """Mean modifications per record, split by restriction bucket.
 
@@ -264,9 +266,39 @@ def edit_intensity(
     import, not how much review anyone did. Set `exclude_batches=False` only to
     reproduce a raw count.
 
+    .. warning::
+       **Pass `batch_stamps` for anything but a toy.** Batch detection is a
+       frequency test over the whole group, and shards are a hash partition:
+       the 1,835-record 2013-06-27 import lands ~5 records per shard, clears
+       `BATCH_THRESHOLD` in none of them, and is counted here as human
+       modification work. Derived from a single shard, `noise` is empty
+       exactly when it matters most.
+
+       Build it once across the group and hand it in::
+
+           counts = Counter()
+           for path in shards:
+               counts += timestamp_counts(schema.load_v1(path))
+           noise = batch_timestamps_from_counts(counts)
+
+           buckets = defaultdict(list)
+           for path in shards:
+               collect_intensity(schema.load_v1(path), noise, buckets)
+           result = intensity_from_buckets(buckets)
+
+       That streaming form is what `rp sessions` runs and it never holds more
+       than one shard; concatenating 400 shards of 50 MB+ is not an option.
+       Omitting `batch_stamps` falls back to `items`-local detection, which is
+       correct only when `items` really is the whole group.
+
     Do not generalize from a single record group.
     """
-    noise = batch_timestamps(items) if exclude_batches else set()
+    if not exclude_batches:
+        noise: set[str] = set()
+    elif batch_stamps is not None:
+        noise = batch_stamps
+    else:
+        noise = batch_timestamps(items)
     buckets: dict[str, list[int]] = defaultdict(list)
     collect_intensity(items, noise, buckets)
     return intensity_from_buckets(buckets)
