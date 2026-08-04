@@ -57,8 +57,18 @@ class Burst:
 
     @property
     def classification(self) -> str:
-        if self.is_midnight and self.count >= BATCH_THRESHOLD:
-            return "automated batch import"
+        """Which of the three signatures this timestamp matches, if any.
+
+        The bulk-tool signature requires a *real clock time* -- the verified
+        instance is `2015-11-20T17:18:21`. A midnight stamp below
+        `BATCH_THRESHOLD` matches neither signature: it is a date with no time
+        recorded, so it says nothing about pace and is reported as exactly
+        that rather than being labelled the nearest-looking class.
+        """
+        if self.is_midnight:
+            if self.count >= BATCH_THRESHOLD:
+                return "automated batch import"
+            return "date-only stamp (no time recorded)"
         if self.count >= TOOL_THRESHOLD:
             return "interactive bulk tool"
         return "manual edit"

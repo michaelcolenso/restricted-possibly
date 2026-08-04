@@ -251,3 +251,23 @@ def test_midnight_stamps_never_enter_a_window():
 
     # But it is still a modification, so edit_intensity keeps counting it.
     assert forensics.edit_intensity(items)["open"]["mean_mods"] == 1.0
+
+
+def test_a_low_count_midnight_stamp_is_not_called_a_bulk_tool():
+    """The tool signature requires a real clock time.
+
+    A midnight stamp seen 5-49 times matches neither signature -- too few for
+    a batch, and no time of day to have been typed at. It should say so
+    instead of falling through to the nearest-looking label.
+    """
+    stamp = "2013-06-27T00:00:00"
+    for n in (1, forensics.TOOL_THRESHOLD, forensics.BATCH_THRESHOLD - 1):
+        assert forensics.Burst(stamp, n).classification == "date-only stamp (no time recorded)"
+
+    assert (
+        forensics.Burst(stamp, forensics.BATCH_THRESHOLD).classification == "automated batch import"
+    )
+    real_clock = "2015-11-20T17:18:21"
+    assert forensics.Burst(real_clock, forensics.TOOL_THRESHOLD).classification == (
+        "interactive bulk tool"
+    )

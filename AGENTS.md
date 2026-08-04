@@ -72,7 +72,7 @@ That same move generalizes everywhere:
 | `coverageStartDate/EndDate` | date ranges | when an agency's institutional memory begins and ends |
 | scope-note length, missing `creators` | description quality | which holdings were buried by being processed badly |
 | `physicalOccurrences` | shelf location | which material moved between facilities, and when |
-| `recordHistory` timestamps (v1) | edit log | staffing levels, workflow, individual working sessions |
+| `recordHistory` timestamps (v1) | edit log | workload rhythm and machine-vs-hand activity — as *windows*, never identified individuals (no actor field) |
 
 Held this way the tension disappears: you are not trading breadth against depth, because the covert lens is *what you apply to* the broad survey. The survey supplies the denominator; the lens supplies the question.
 

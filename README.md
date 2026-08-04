@@ -243,8 +243,9 @@ Ranked by cost-to-value, all runnable on public data:
 1. **Extend the inventory to all 551 groups.** Start mid-size (RG 242, 59, 109, 111, 127)
    before the 100 GB+ groups. RG 64 and RG 29 need checkpointing, not an interactive run.
 2. **Cross-agency withholding signatures.** Quantify the (b)(1)/(b)(6)/(b)(3) mix per agency.
-3. **Hunt `Other` corpus-wide.** It's an escape hatch from the controlled vocabulary; the
-   `note` field always explains it.
+3. **Hunt `Other` corpus-wide.** It's an escape hatch from the controlled vocabulary. In
+   RG 263 the `note` field explained every one of them — whether that holds elsewhere is
+   untested, and an `Other` record with no note would be a finding in itself.
 4. **Digitization gap.** `digitalObjects` presence × record group × coverage decade ×
    physical location. No temporal dependency, cheap.
 5. **Coverage-date topology.** When each agency's paper trail starts and ends — an
