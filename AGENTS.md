@@ -327,8 +327,8 @@ Open thread worth pursuing: every one of those 25 carries a note stating that de
 Ranked by cost-to-value, all runnable on data already public:
 
 1. **Extend the restriction inventory across all 551 groups.** The product is a public index of what the government has described and closed — naId, title, legal basis, classification, extent, location. Nothing like it exists. Start with mid-size groups (RG 242, 59, 109, 111, 127) before the 100 GB+ monsters.
-2. **Cross-agency withholding signatures.** RG 263 is ~98% (b)(1). A State Dept sample showed a substantial (b)(6) share. Agencies have distinguishable secrecy profiles; quantify them.
-3. **Hunt `Other` corpus-wide.** In RG 263 it flagged a statutorily-exempt covert operation. It is an escape hatch from the controlled vocabulary — wherever it appears, the note field will say something specific.
+2. **Cross-agency withholding signatures.** RG 263 is ~98% (b)(1); a State Dept *sample* showed a substantial (b)(6) share. **Hypothesis:** agencies have distinguishable secrecy profiles. That is one full survey against one sample — quantify it across groups before treating it as a fact.
+3. **Hunt `Other` corpus-wide.** In RG 263 it flagged a statutorily-exempt covert operation, and there the note explained every instance. It is an escape hatch from the controlled vocabulary, so **the hypothesis to test is whether the note always says something specific** — an `Other` with no note or an uninformative one is the finding, not a data glitch. Record those separately.
 4. **Digitization gap.** `digitalObjects` presence × record group × `coverageStartDate` decade × `physicalOccurrences` location. Purely descriptive, no temporal dependency, cheap.
 5. **Coverage-date topology.** When each agency's paper trail starts and ends, across 551 groups — an organizational history of the federal government drawn from record existence alone.
 6. **Description-quality gradient.** Missing `creators`, absent coverage dates, oversized or empty scope notes. Metadata about metadata reveals which holdings are well-processed and which were dumped.

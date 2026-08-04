@@ -76,9 +76,13 @@ in Guatemala* — the **open** series, `Restricted - Partly` because the CIA red
 some records before transfer. That last one is the open counterpart to the 25 above,
 and is where the reconciliation problem in `OPEN-QUESTIONS.md` lives.
 
-**Falsified by:** an `Other`-coded record whose note cites *no* legal basis at all, or an
-agency where the code is used with no note — either would mean the note is not reliably
-the answer, which is the load-bearing part of this claim.
+**Falsified by:** an **RG 263** `Other`-coded record whose note is absent or cites no
+legal basis. The claim is that within this record group the note is reliably the answer,
+so only an RG 263 counterexample can break it.
+
+An `Other` record with no note in another group refutes nothing here — it refutes the
+corpus-wide generalization, which this section does not make. It would still be the most
+useful thing the sweep in `OPEN-QUESTIONS.md` could turn up.
 **Replicated across: 1 agency.**
 
 ### RG 263 withholding profile (survey complete)

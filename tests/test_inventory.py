@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from restricted_possibly import corpus, inventory
 
 
@@ -237,3 +239,31 @@ def test_by_exemption_counts_descriptions_not_occurrences(monkeypatch):
     # The row is untouched -- both classifications survive.
     assert row.exemptions == "FOIA (b)(1) National Security; FOIA (b)(1) National Security"
     assert row.securityClassification == "Top Secret; Restricted Data/Formerly Restricted Data"
+
+
+def test_build_refuses_to_return_a_survey_of_nothing(monkeypatch):
+    """The library path must not bypass the CLI's empty-group guard.
+
+    A misspelled group streams nothing, and every count is then a truthful
+    description of nothing -- 0 restricted, 0 unrestricted, 0.00% -- which is
+    indistinguishable from a real zero-withholding survey.
+    """
+    monkeypatch.setattr(corpus, "stream_group", lambda *a, **k: iter([]))
+
+    with pytest.raises(ValueError, match="no records scanned"):
+        inventory.build("rg_typo")
+
+
+def test_build_does_not_refuse_a_group_that_only_failed_to_parse(monkeypatch):
+    """Zero scanned but non-zero failures is a different problem, reported as one."""
+
+    def fake_stream(group, prefilter=None, limit_shards=None, stats=None):
+        if stats is not None:
+            stats.parse_failures += 4
+        return iter([])
+
+    monkeypatch.setattr(corpus, "stream_group", fake_stream)
+
+    rows, s = inventory.build("rg_263")
+    assert rows == []
+    assert s.parse_failures == 4

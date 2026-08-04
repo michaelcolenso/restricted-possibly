@@ -178,6 +178,17 @@ def build(
         parse_failures=stats.parse_failures,
         personal_redacted=personal_redacted,
     )
+    if not scanned and not stats.parse_failures:
+        # A misspelled or absent group streams nothing, and every count below
+        # is then a truthful description of nothing: 0 restricted, 0
+        # unrestricted, a 0.00% rate. That is indistinguishable from a real
+        # zero-withholding survey, so refuse to hand it back. The CLI checks
+        # the shard list first and says so more helpfully; this guards the
+        # library path, which is the one AGENTS.md 9 points people at.
+        raise ValueError(
+            f"no records scanned for {group!r} -- check the group name. "
+            "Nothing was read, so every count would be a description of nothing."
+        )
     return rows, summary
 
 
