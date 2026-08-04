@@ -85,6 +85,9 @@ def build(
     is reported separately as `Summary.unreviewed`; counting a processing
     backlog as withheld would overstate every rate built on this.
 
+    `limit_shards` is `None` or 0 for a full pass, N for the first N shards;
+    negatives are rejected. See `corpus.stream_group`.
+
     Item- and fileUnit-level `(b)(6)` rows have their identifying and locating
     fields redacted by default, and are counted in `Summary.personal_redacted`.
     Run this over RG 15 or RG 85 without that and the output is a person-level

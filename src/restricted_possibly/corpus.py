@@ -171,16 +171,24 @@ def stream_group(
 ) -> Iterator[dict[str, Any]]:
     """Stream every record in a record group. See `stream_shard`.
 
-    `limit_shards` must be non-negative. Python would read a negative slice
-    from the end -- `[:-1]` is every shard but the last -- so a caller asking
-    for "-1 shards" would get a near-complete pass silently missing one
-    shard's records, and a Summary with nothing to mark it partial.
+    `limit_shards` accepts `None` **or 0** for "no limit" -- one meaning for
+    zero across this API and the CLI's `--limit-shards 0`, which documents it
+    as "all shards." Left unnormalized, `shards(group)[:0]` is empty, so the
+    same value meant *everything* through the CLI and *nothing* through
+    `inventory.build`, and the library call failed with "no records scanned"
+    for a group that was perfectly fine.
+
+    Negative values are rejected. Python reads a negative slice from the end
+    -- `[:-1]` is every shard but the last -- so "-1 shards" would give a
+    near-complete pass silently missing one shard's records.
     """
     if limit_shards is not None and limit_shards < 0:
         raise ValueError(
             f"limit_shards must be >= 0, got {limit_shards}. Negative values slice "
             "from the end and would drop shards without saying so."
         )
+    if limit_shards == 0:
+        limit_shards = None
     for shard in shards(group)[:limit_shards]:
         yield from stream_shard(shard.key, prefilter, stats)
 

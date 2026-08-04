@@ -82,3 +82,20 @@ def test_stream_group_rejects_negative_shard_limits(monkeypatch):
     # 0 and None both mean "no limit" and must still work.
     monkeypatch.setattr(corpus, "stream_shard", lambda *a, **k: iter([{"naId": 1}]))
     assert len(list(corpus.stream_group("rg_263", limit_shards=None))) == 1
+
+
+def test_zero_shard_limit_means_all_shards(monkeypatch):
+    """0 is the CLI's documented sentinel for "no limit."
+
+    Unnormalized, `shards(group)[:0]` is empty, so the same value meant
+    everything through the CLI and nothing through `inventory.build` -- which
+    then failed with "no records scanned" for a healthy group.
+    """
+    monkeypatch.setattr(
+        corpus, "shards", lambda *a, **k: [corpus.Shard(f"k{i}", 1) for i in range(3)]
+    )
+    monkeypatch.setattr(corpus, "stream_shard", lambda key, *a, **k: iter([{"naId": key}]))
+
+    assert len(list(corpus.stream_group("rg_263", limit_shards=0))) == 3
+    assert len(list(corpus.stream_group("rg_263", limit_shards=None))) == 3
+    assert len(list(corpus.stream_group("rg_263", limit_shards=2))) == 2
