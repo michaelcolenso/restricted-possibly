@@ -152,3 +152,56 @@ def test_csv_roundtrip(tmp_path):
     text = p.read_text()
     assert "note" in text.splitlines()[0]  # note column present
     assert "1984" in text  # and populated
+
+
+def _personal(na: str, level: str, exemptions: list[str]) -> dict:
+    rec = _rec(na, "Restricted - Partly")
+    rec["levelOfDescription"] = level
+    rec["accessRestriction"] = {
+        "status": "Restricted - Partly",
+        "specificAccessRestrictions": [{"restriction": e} for e in exemptions],
+        "note": "Contains personal information about the subject.",
+    }
+    rec["physicalOccurrences"] = [
+        {
+            "mediaOccurrences": [{"specificMediaType": "Textual Records", "containerId": "Box 9"}],
+            "referenceUnits": [{"name": "National Archives at St. Louis"}],
+        }
+    ]
+    return rec
+
+
+def test_item_level_b6_records_are_redacted_to_aggregate(monkeypatch):
+    """Run over RG 15 or RG 85, row-level (b)(6) is a person-level dossier."""
+    records = [_personal("1", "fileUnit", [inventory.PERSONAL])]
+    monkeypatch.setattr(corpus, "stream_group", lambda *a, **k: iter(records))
+
+    (row,), s = inventory.build("rg_15")
+
+    assert s.personal_redacted == 1
+    assert s.restricted == 1  # still counted
+    assert row.exemptions == inventory.PERSONAL  # still classifiable
+    assert row.title == row.note == row.containers == row.location == inventory.REDACTED
+    assert row.naId == "1"
+
+
+def test_series_level_b6_records_are_left_intact(monkeypatch):
+    """A series carrying (b)(6) describes a body of records, not a person."""
+    records = [_personal("2", "series", [inventory.PERSONAL])]
+    monkeypatch.setattr(corpus, "stream_group", lambda *a, **k: iter(records))
+
+    (row,), s = inventory.build("rg_263")
+
+    assert s.personal_redacted == 0
+    assert row.title == "record 2"
+    assert row.location == "National Archives at St. Louis"
+
+
+def test_redaction_can_be_turned_off_deliberately(monkeypatch):
+    records = [_personal("3", "item", [inventory.PERSONAL])]
+    monkeypatch.setattr(corpus, "stream_group", lambda *a, **k: iter(records))
+
+    (row,), s = inventory.build("rg_15", redact_personal=False)
+
+    assert s.personal_redacted == 0
+    assert row.title == "record 3"

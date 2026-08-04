@@ -246,6 +246,8 @@ Extract every withheld description. `accessRestriction` has a clean controlled v
 
 `naId, recordGroup, level, status, exemptions, securityClassification, note, coverageStart, coverageEnd, mediaType, containers, location, title`
 
+A description can carry several `specificAccessRestrictions`, each with its own `securityClassification` — emit **all** of them. Keeping only the last one dropped `Restricted Data/Formerly Restricted Data` (the Atomic Energy Act category) from four RG 263 series that also carry a collateral classification.
+
 Emit `note` **untruncated**. The qualification that makes a code interpretable can sit anywhere in it, and a cut-off statute is worse than no statute. `mediaType`, `containers`, and `location` come from `physicalOccurrences` (`mediaOccurrences[].specificMediaType` / `.containerId`, `referenceUnits[].name`) — a naId without a facility and a container is not yet something a person can request.
 
 Interpretation notes:
@@ -262,7 +264,7 @@ Restriction status does **not** mutate. Four independent tests on RG 263:
 - Oct-2018 batch of 33 records: 33/33 identical in 2025
 - All 149 records restricted in 2021: 149/149 identical in 2025 (72/72 Partly, 70/70 Fully, 7/7 Possibly)
 
-**Declassification does not appear as a status flip.** If material opens, it appears to arrive as *new* descriptions. Do not build a status-change monitor. **Do test whether write-once holds in other record groups** — it is established for one agency only, and a counterexample would be a significant finding.
+**Declassification does not appear as a status flip** — in RG 263. If material opens, it appears to arrive as *new* descriptions. A status-change monitor over that group would have caught nothing in four years. **This is one agency and does not generalize:** test whether write-once holds elsewhere before deciding a monitor is pointless there, and treat a counterexample as a significant finding.
 
 ### 4.5 Timestamp forensics (v1 backups only — see §2 warning)
 
@@ -338,7 +340,7 @@ Ranked by cost-to-value, all runnable on data already public:
 
 Everything here is public-domain federal metadata. Two constraints:
 
-- **Aggregate patterns about agencies are the product. Profiles of named private individuals are not.** RG 15 (veterans' pensions), RG 85 (immigration), and every `(b)(6) Personal Information` flag exist because living people and their descendants are in those files. The (b)(6) code is a signal to aggregate, not to drill down.
+- **Aggregate patterns about agencies are the product. Profiles of named private individuals are not.** RG 15 (veterans' pensions), RG 85 (immigration), and every `(b)(6) Personal Information` flag exist because living people and their descendants are in those files. The (b)(6) code is a signal to aggregate, not to drill down. `inventory.build` enforces this: item- and fileUnit-level `(b)(6)` rows keep their structural fields and counts but have title, note, containers, and location redacted, reported as `Summary.personal_redacted`. Series-level `(b)(6)` describes a body of records rather than a person and is left intact. `redact_personal=False` (CLI `--include-personal`) exists for a researcher with a reason; the default is not it.
 - **Cite the corpus.** NARA requests attribution: *National Archives Catalog, accessed [DATE] from https://registry.opendata.aws/nara-national-archives-catalog*.
 
 ---

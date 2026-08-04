@@ -25,8 +25,14 @@ Restriction status does not mutate. Four independent tests on RG 263:
 Breakdown of the 149: 72/72 `Restricted - Partly`, 70/70 `Restricted - Fully`,
 7/7 `Restricted - Possibly` — identical across four years.
 
-**Implication.** Declassification does not appear as a status flip. Released material
-appears to arrive as *new* descriptions instead. Do not build a status-change monitor.
+**Implication, scoped to RG 263.** Declassification does not appear as a status flip;
+released material appears to arrive as *new* descriptions instead. A status-change
+monitor over RG 263 would have found nothing in four years.
+
+Do **not** read that as corpus-wide guidance. One agency's practice is not NARA's, and
+whether another record group mutates status is exactly the open question — so run
+`write_once_check` elsewhere before concluding a monitor is pointless there. A
+counterexample would be a significant finding.
 
 **Falsified by:** any naId whose status changes between vintages in any record group.
 `inventory.write_once_check` tests this. **Replicated across: 1 agency.** This is the

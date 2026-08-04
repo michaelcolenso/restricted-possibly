@@ -18,6 +18,19 @@ from pathlib import Path
 
 from . import corpus, schema
 
+#: `(b)(6)` marks a withholding made to protect a living person or their
+#: descendants. Per the limit in AGENTS.md 8, that code is a signal to
+#: aggregate, not to drill down.
+PERSONAL = "FOIA (b)(6) Personal Information"
+
+#: Levels at which one description is plausibly one person -- a pension file,
+#: an immigration case file. A `series` carrying (b)(6) describes a body of
+#: records ("Name Files Under the Nazi War Crimes Act"), not an individual, so
+#: it is already aggregate and stays intact.
+PERSONAL_LEVELS = {"item", "fileUnit"}
+
+REDACTED = "[(b)(6) personal information -- aggregate only]"
+
 
 @dataclass
 class Row:
@@ -51,6 +64,9 @@ class Summary:
     #: Lines that could not be parsed and so never reached `scanned`. Non-zero
     #: means every count here is a lower bound -- report it or do not publish.
     parse_failures: int = 0
+    #: Row-level `(b)(6)` records whose identifying fields were suppressed.
+    #: They are still counted everywhere else in this summary.
+    personal_redacted: int = 0
 
     @property
     def restricted_rate(self) -> float:
@@ -59,19 +75,29 @@ class Summary:
         return self.restricted / base if base else 0.0
 
 
-def build(group: str, limit_shards: int | None = None) -> tuple[list[Row], Summary]:
+def build(
+    group: str, limit_shards: int | None = None, redact_personal: bool = True
+) -> tuple[list[Row], Summary]:
     """Single streaming pass over a record group.
 
     Rows are *adjudicated* withholdings only -- `Restricted - Fully` and
     `Restricted - Partly`. `Restricted - Possibly` means "not yet reviewed" and
     is reported separately as `Summary.unreviewed`; counting a processing
     backlog as withheld would overstate every rate built on this.
+
+    Item- and fileUnit-level `(b)(6)` rows have their identifying and locating
+    fields redacted by default, and are counted in `Summary.personal_redacted`.
+    Run this over RG 15 or RG 85 without that and the output is a person-level
+    index of veterans' pension and immigration files -- the exact artifact
+    AGENTS.md 8 rules out. The rows stay, so the counts remain complete;
+    what goes is the ability to walk from a row to a named individual's file.
+    Pass `redact_personal=False` only with a reason.
     """
     rows: list[Row] = []
     status_ct: Counter[str] = Counter()
     exempt_ct: Counter[str] = Counter()
     level_ct: Counter[str] = Counter()
-    scanned = unrestricted = no_status = 0
+    scanned = unrestricted = no_status = personal_redacted = 0
     stats = corpus.ScanStats()
 
     for rec in corpus.stream_group(group, limit_shards=limit_shards, stats=stats):
@@ -104,24 +130,33 @@ def build(group: str, limit_shards: int | None = None) -> tuple[list[Row], Summa
             ),
             None,
         )
-        rows.append(
-            Row(
-                naId=str(rec.get("naId")),
-                recordGroup=rgnum,
-                level=rec.get("levelOfDescription"),
-                status=r.status,
-                exemptions="; ".join(r.exemptions),
-                securityClassification=r.security_classification,
-                coverageStart=schema.year(rec.get("coverageStartDate")),
-                coverageEnd=schema.year(rec.get("coverageEndDate")),
-                title=(rec.get("title") or "").replace("\n", " ")[:300],
-                # Never truncated: the note *is* the legal basis, and the
-                # qualification that makes a code like `Other` interpretable
-                # can sit anywhere in it.
-                note=(r.note or "").replace("\n", " "),
-                **schema.physical(rec),
-            )
+        level = rec.get("levelOfDescription")
+        personal = redact_personal and PERSONAL in r.exemptions and level in PERSONAL_LEVELS
+        if personal:
+            personal_redacted += 1
+
+        row = Row(
+            naId=str(rec.get("naId")),
+            recordGroup=rgnum,
+            level=level,
+            status=r.status,
+            exemptions="; ".join(r.exemptions),
+            securityClassification=r.security_classification,
+            coverageStart=schema.year(rec.get("coverageStartDate")),
+            coverageEnd=schema.year(rec.get("coverageEndDate")),
+            title=(rec.get("title") or "").replace("\n", " ")[:300],
+            # Never truncated: the note *is* the legal basis, and the
+            # qualification that makes a code like `Other` interpretable
+            # can sit anywhere in it.
+            note=(r.note or "").replace("\n", " "),
+            **schema.physical(rec),
         )
+        if personal:
+            # Structure stays (the counts must still add up); the identifying
+            # and locating fields go.
+            row.title = row.note = REDACTED
+            row.containers = row.location = REDACTED
+        rows.append(row)
 
     unreviewed = status_ct.get(schema.UNREVIEWED, 0)
     summary = Summary(
@@ -135,6 +170,7 @@ def build(group: str, limit_shards: int | None = None) -> tuple[list[Row], Summa
         by_exemption=dict(exempt_ct.most_common()),
         by_level=dict(level_ct.most_common()),
         parse_failures=stats.parse_failures,
+        personal_redacted=personal_redacted,
     )
     return rows, summary
 

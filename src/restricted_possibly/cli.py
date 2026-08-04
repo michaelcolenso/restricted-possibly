@@ -59,6 +59,10 @@ def inventory_cmd(
     group: str,
     out: Path = typer.Option(Path("data"), help="Output directory."),
     limit_shards: int = typer.Option(0, help="0 = all shards. Use a small N to smoke-test."),
+    include_personal: bool = typer.Option(
+        False,
+        help="Emit identifying fields for item/fileUnit (b)(6) records. Off by default.",
+    ),
 ) -> None:
     """Extract every withheld description in a record group to CSV."""
     if not corpus.shards(group):
@@ -68,7 +72,9 @@ def inventory_cmd(
         )
         raise typer.Exit(1)
 
-    rows, summary = inventory.build(group, limit_shards or None)
+    rows, summary = inventory.build(
+        group, limit_shards or None, redact_personal=not include_personal
+    )
 
     # A partial run never overwrites a full one: an expensive complete inventory
     # and a 3-shard smoke test are indistinguishable once written, so the limit
@@ -89,6 +95,18 @@ def inventory_cmd(
     t.add_row("status absent (legacy imports)", f"{summary.no_status:,}")
     t.add_row("restricted rate", f"{summary.restricted_rate:.2%}")
     console.print(t)
+
+    if include_personal:
+        console.print(
+            "[yellow]--include-personal: identifying fields for item/fileUnit (b)(6) "
+            "records are in this output. Aggregate patterns about agencies are the "
+            "product; profiles of named private individuals are not.[/yellow]"
+        )
+    elif summary.personal_redacted:
+        console.print(
+            f"[cyan]{summary.personal_redacted:,} (b)(6) rows redacted to aggregate. "
+            "They are still counted in every figure above.[/cyan]"
+        )
 
     if summary.parse_failures:
         console.print(

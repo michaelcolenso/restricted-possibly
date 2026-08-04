@@ -53,8 +53,19 @@ def _term(value: Any) -> Any:
 class Restriction:
     status: str | None = None
     exemptions: list[str] = field(default_factory=list)
-    security_classification: str | None = None
+    security_classifications: list[str] = field(default_factory=list)
     note: str | None = None
+
+    @property
+    def security_classification(self) -> str | None:
+        """All classifications, de-duplicated, joined. None when absent.
+
+        A description can carry several `specificAccessRestrictions`, each with
+        its own classification. Keeping only one hides the rest -- and it is
+        the *highest* one that determines how the material is handled, so the
+        one silently dropped may be the one that matters.
+        """
+        return "; ".join(self.security_classifications) or None
 
     @property
     def is_restricted(self) -> bool:
@@ -82,19 +93,20 @@ def parse_restriction(access: dict[str, Any] | None) -> Restriction:
         inner = arr.get("specificAccessRestriction") if isinstance(arr, dict) else None
         specifics = [inner] if isinstance(inner, dict) else (inner or [])
 
-    exemptions, classification = [], None
+    exemptions: list[str] = []
+    classifications: list[str] = []
     for s in specifics:
         if not isinstance(s, dict):
             continue
         if (r := _term(s.get("restriction"))) is not None:
             exemptions.append(r)
         if (c := _term(s.get("securityClassification"))) is not None:
-            classification = c
+            classifications.append(str(c))
 
     return Restriction(
         status=_term(access.get("status")),
         exemptions=exemptions,
-        security_classification=classification,
+        security_classifications=list(dict.fromkeys(classifications)),
         note=access.get("note"),
     )
 

@@ -30,6 +30,11 @@ facility that holds it.
 That artifact does not exist anywhere. It matters because the hardest part of a FOIA
 request is naming the record you want, and NARA has already published the names.
 
+One exception, by design: item- and fileUnit-level records flagged `FOIA (b)(6) Personal
+Information` keep their counts but lose their identifying and locating fields. Aggregate
+patterns about agencies are the product; an index of named private individuals' pension or
+immigration files is not. `--include-personal` overrides it if you have a reason.
+
 Running it against RG 263 (CIA) found 1,359 withheld descriptions out of 26,858 — plus
 509 more that nobody has reviewed yet — and inside them, this:
 
@@ -190,9 +195,10 @@ snapshot diff across 9,985 shared naIds, a 33-record batch, and all 149 records 
 in 2021 — produced **zero** status changes over four years. Declassification does not
 appear as a status flip; released material seems to arrive as *new* descriptions.
 
-Do not build a status-change monitor. **Do** run `write_once_check` on other record
-groups — a counterexample would be a significant finding, and it's established for exactly
-one agency.
+That holds **for RG 263**, where it's established across four tests. Don't generalize it:
+a status-change monitor is pointless *there*, but whether another agency mutates status is
+untested. Run `write_once_check` on other record groups before assuming — a counterexample
+would be a significant finding.
 
 ## Suggested, not established
 

@@ -147,3 +147,27 @@ def test_physical_extracts_extent_and_location():
 
 def test_physical_is_empty_when_absent():
     assert schema.physical({}) == {"mediaType": "", "containers": "", "location": ""}
+
+
+def test_all_security_classifications_are_kept():
+    """The highest classification decides handling -- dropping one can hide it."""
+    r = schema.parse_restriction(
+        {
+            "status": "Restricted - Partly",
+            "specificAccessRestrictions": [
+                {
+                    "restriction": "FOIA (b)(1) National Security",
+                    "securityClassification": "Secret",
+                },
+                {"restriction": "FOIA (b)(3) Statute", "securityClassification": "Top Secret"},
+                {"restriction": "Other", "securityClassification": "Secret"},
+            ],
+        }
+    )
+    assert r.security_classifications == ["Secret", "Top Secret"]  # de-duplicated
+    assert r.security_classification == "Secret; Top Secret"
+
+
+def test_security_classification_is_none_when_absent():
+    r = schema.parse_restriction({"status": "Unrestricted"})
+    assert r.security_classification is None
