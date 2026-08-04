@@ -83,10 +83,16 @@ def timestamp_counts(items: list[dict[str, Any]]) -> Counter[str]:
     frequencies are only meaningful group-wide (see `sessions`), so the fold
     has to happen somewhere -- doing it on counts rather than on records is
     what keeps a 400-shard group inside memory.
+
+    Counts **distinct records**, not history entries: a record whose
+    `modification[]` lists the same timestamp twice contributes 1, not 2. All
+    three signatures are about how many *records* share a stamp, so counting
+    entries would let a single record with five repeats masquerade as a
+    five-record bulk-tool run.
     """
     ct: Counter[str] = Counter()
     for _level, body in schema.iter_v1_descriptions(items):
-        ct.update(schema.v1_modifications(body))
+        ct.update(set(schema.v1_modifications(body)))
     return ct
 
 
@@ -167,11 +173,15 @@ def collect_events(items: list[dict[str, Any]], machine_stamps: set[str]) -> lis
     why `edit_intensity` and this function treat a 3-record midnight stamp
     differently: counting edits and measuring pace are different questions,
     and only the second needs a real clock time.
+
+    A timestamp repeated inside one record yields one event, for the same
+    reason `timestamp_counts` de-duplicates: a window's `count` is meant to be
+    records touched, and one record cannot be two edits at the same instant.
     """
     out: list[tuple[str, str]] = []
     for _level, body in schema.iter_v1_descriptions(items):
         na = str(body.get("naId"))
-        for t in schema.v1_modifications(body):
+        for t in dict.fromkeys(schema.v1_modifications(body)):
             if t.endswith("T00:00:00") or t in machine_stamps:
                 continue
             out.append((t, na))

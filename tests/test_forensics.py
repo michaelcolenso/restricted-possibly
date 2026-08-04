@@ -271,3 +271,42 @@ def test_a_low_count_midnight_stamp_is_not_called_a_bulk_tool():
     assert forensics.Burst(real_clock, forensics.TOOL_THRESHOLD).classification == (
         "interactive bulk tool"
     )
+
+
+def _repeated(stamp: str, times: int, n_records: int = 1) -> list[dict]:
+    """v1 records whose modification[] repeats one timestamp."""
+    return _stamped(*[(None, [stamp] * times) for _ in range(n_records)])
+
+
+def test_burst_counts_are_records_not_history_entries():
+    """One record repeating a stamp is not a multi-record burst.
+
+    All three signatures are about how many *records* share a timestamp, so a
+    single record listing the same modification five times must not read as a
+    five-record bulk-tool run.
+    """
+    stamp = "2015-11-20T17:18:21"
+    counts = forensics.timestamp_counts(_repeated(stamp, forensics.TOOL_THRESHOLD))
+    assert counts[stamp] == 1
+    assert forensics.bursts_from_counts(counts) == []
+    assert forensics.tool_timestamps_from_counts(counts) == set()
+
+    midnight = "2013-06-27T00:00:00"
+    counts = forensics.timestamp_counts(_repeated(midnight, forensics.BATCH_THRESHOLD))
+    assert counts[midnight] == 1
+    assert forensics.batch_timestamps_from_counts(counts) == set()
+
+    # Distinct records sharing it still register normally.
+    counts = forensics.timestamp_counts(_repeated(stamp, 1, forensics.TOOL_THRESHOLD))
+    assert counts[stamp] == forensics.TOOL_THRESHOLD
+    assert forensics.tool_timestamps_from_counts(counts) == {stamp}
+
+
+def test_a_repeated_stamp_contributes_one_event_to_a_window():
+    """A window's count is records touched; one record is not two edits."""
+    items = _stamped(
+        ("Unrestricted", ["2018-10-03T09:00:00"] * 3),
+        *[(None, [f"2018-10-03T09:{m:02d}:00"]) for m in range(1, 10)],
+    )
+    (window,) = forensics.sessions(items, min_edits=10)
+    assert window["count"] == 10  # not 12
