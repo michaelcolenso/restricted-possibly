@@ -30,6 +30,9 @@ class Row:
     note: str
     coverageStart: int | None
     coverageEnd: int | None
+    mediaType: str
+    containers: str
+    location: str
     title: str
 
 
@@ -45,6 +48,9 @@ class Summary:
     by_status: dict[str, int]
     by_exemption: dict[str, int]
     by_level: dict[str, int]
+    #: Lines that could not be parsed and so never reached `scanned`. Non-zero
+    #: means every count here is a lower bound -- report it or do not publish.
+    parse_failures: int = 0
 
     @property
     def restricted_rate(self) -> float:
@@ -66,8 +72,9 @@ def build(group: str, limit_shards: int | None = None) -> tuple[list[Row], Summa
     exempt_ct: Counter[str] = Counter()
     level_ct: Counter[str] = Counter()
     scanned = unrestricted = no_status = 0
+    stats = corpus.ScanStats()
 
-    for rec in corpus.stream_group(group, limit_shards=limit_shards):
+    for rec in corpus.stream_group(group, limit_shards=limit_shards, stats=stats):
         scanned += 1
         r = schema.parse_restriction(rec.get("accessRestriction"))
         if r.status is None:
@@ -108,7 +115,11 @@ def build(group: str, limit_shards: int | None = None) -> tuple[list[Row], Summa
                 coverageStart=schema.year(rec.get("coverageStartDate")),
                 coverageEnd=schema.year(rec.get("coverageEndDate")),
                 title=(rec.get("title") or "").replace("\n", " ")[:300],
-                note=(r.note or "").replace("\n", " ")[:1000],
+                # Never truncated: the note *is* the legal basis, and the
+                # qualification that makes a code like `Other` interpretable
+                # can sit anywhere in it.
+                note=(r.note or "").replace("\n", " "),
+                **schema.physical(rec),
             )
         )
 
@@ -123,6 +134,7 @@ def build(group: str, limit_shards: int | None = None) -> tuple[list[Row], Summa
         by_status=dict(status_ct.most_common()),
         by_exemption=dict(exempt_ct.most_common()),
         by_level=dict(level_ct.most_common()),
+        parse_failures=stats.parse_failures,
     )
     return rows, summary
 

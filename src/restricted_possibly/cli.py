@@ -73,6 +73,13 @@ def inventory_cmd(
     t.add_row("restricted rate", f"{summary.restricted_rate:.2%}")
     console.print(t)
 
+    if summary.parse_failures:
+        console.print(
+            f"[red]{summary.parse_failures:,} lines failed to parse and are absent from "
+            "every count above. Treat these figures as lower bounds and say so if you "
+            "publish them.[/red]"
+        )
+
     if summary.by_exemption:
         e = Table("exemption", "n")
         for k, v in summary.by_exemption.items():

@@ -35,6 +35,25 @@ def client():
     return boto3.client("s3", config=Config(signature_version=UNSIGNED))
 
 
+@dataclass
+class ScanStats:
+    """Records skipped during a scan, so a pass can be audited rather than trusted.
+
+    A silently dropped line shrinks the denominator of every rate computed from
+    the scan while the run still presents itself as complete. Pass one of these
+    into `stream_shard`/`stream_group` and check `parse_failures` before
+    publishing any count.
+    """
+
+    parsed: int = 0
+    parse_failures: int = 0
+
+    @property
+    def failure_rate(self) -> float:
+        seen = self.parsed + self.parse_failures
+        return self.parse_failures / seen if seen else 0.0
+
+
 @dataclass(frozen=True)
 class Shard:
     key: str
@@ -105,12 +124,19 @@ def peek(key: str, nbytes: int = 300_000) -> dict[str, Any] | None:
         return None
 
 
-def stream_shard(key: str, prefilter: str | None = None) -> Iterator[dict[str, Any]]:
+def stream_shard(
+    key: str, prefilter: str | None = None, stats: ScanStats | None = None
+) -> Iterator[dict[str, Any]]:
     """Stream parsed records from a v2 JSONL shard.
 
     `prefilter` is a raw substring tested against each line *before* JSON
     parsing. Full scans are bound by parse cost, not network -- rejecting
     lines cheaply is what makes 400-shard passes tractable.
+
+    Unparsable lines are skipped, because one malformed record should not
+    abort a 400-shard pass. Pass `stats` to count them: skipped lines are
+    invisible in the output but they still shrink every denominator computed
+    from it, so a published count needs the failure number alongside it.
     """
     obj = client().get_object(Bucket=BUCKET, Key=key)
     for line in io.TextIOWrapper(obj["Body"], encoding="utf-8", errors="replace"):
@@ -119,17 +145,25 @@ def stream_shard(key: str, prefilter: str | None = None) -> Iterator[dict[str, A
         if prefilter is not None and prefilter not in line:
             continue
         try:
-            yield json.loads(line)["record"]
+            record = json.loads(line)["record"]
         except (json.JSONDecodeError, KeyError):
+            if stats is not None:
+                stats.parse_failures += 1
             continue
+        if stats is not None:
+            stats.parsed += 1
+        yield record
 
 
 def stream_group(
-    group: str, prefilter: str | None = None, limit_shards: int | None = None
+    group: str,
+    prefilter: str | None = None,
+    limit_shards: int | None = None,
+    stats: ScanStats | None = None,
 ) -> Iterator[dict[str, Any]]:
     """Stream every record in a record group. See `stream_shard`."""
     for shard in shards(group)[:limit_shards]:
-        yield from stream_shard(shard.key, prefilter)
+        yield from stream_shard(shard.key, prefilter, stats)
 
 
 def resolve_title(record: dict[str, Any]) -> str | None:

@@ -92,8 +92,42 @@ def test_row_fields_carry_the_legal_basis():
         "note",
         "coverageStart",
         "coverageEnd",
+        "mediaType",
+        "containers",
+        "location",
         "title",
     ]
+
+
+def test_note_is_never_truncated(monkeypatch):
+    """The note is the legal basis; a cut-off statute is worse than none."""
+    long_note = "Per the CIA Information Act of 1984, " + "x" * 5000
+    rec = _rec("1", "Restricted - Fully")
+    rec["accessRestriction"] = {
+        "status": "Restricted - Fully",
+        "specificAccessRestrictions": [],
+        "note": long_note,
+    }
+    monkeypatch.setattr(corpus, "stream_group", lambda *a, **k: iter([rec]))
+
+    (row,), _ = inventory.build("rg_test")
+    assert row.note == long_note
+
+
+def test_build_reports_parse_failures(monkeypatch):
+    """A skipped line shrinks the denominator; the count has to surface."""
+
+    def fake_stream(group, prefilter=None, limit_shards=None, stats=None):
+        if stats is not None:
+            stats.parse_failures += 3
+            stats.parsed += 1
+        return iter([_rec("1", "Restricted - Fully")])
+
+    monkeypatch.setattr(corpus, "stream_group", fake_stream)
+
+    _, s = inventory.build("rg_test")
+    assert s.parse_failures == 3
+    assert s.scanned == 1  # unparsable lines never reach `scanned`
 
 
 def test_csv_roundtrip(tmp_path):
@@ -107,6 +141,9 @@ def test_csv_roundtrip(tmp_path):
             securityClassification="Top Secret",
             coverageStart=None,
             coverageEnd=None,
+            mediaType="Textual Records",
+            containers="Box 1",
+            location="National Archives at College Park",
             title="Headquarters PBFORTUNE/PBSUCCESS Planning Files",
             note="Per the CIA Information Act of 1984...",
         )

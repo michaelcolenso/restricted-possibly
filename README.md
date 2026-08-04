@@ -23,8 +23,9 @@ rp inventory rg_263        # every withheld description → CSV
 ## What this actually does
 
 It builds a **withholding inventory**: for any record group, every description NARA has
-catalogued *and closed* — with the naId, title, legal basis, security classification,
-physical extent, and location.
+catalogued *and closed* — with the naId, title, legal basis (the full, untruncated
+restriction note), security classification, media type, container ids, and the NARA
+facility that holds it.
 
 That artifact does not exist anywhere. It matters because the hardest part of a FOIA
 request is naming the record you want, and NARA has already published the names.

@@ -231,6 +231,8 @@ for line in io.TextIOWrapper(obj['Body'], encoding='utf-8', errors='replace'):
 
 This made a 400-shard RG 263 pass tractable. Scale it with checkpointing for the 100 GB+ groups — do not attempt RG 64 or RG 29 interactively.
 
+**Count what you skip.** One malformed line should not abort a 400-shard pass, but a silently dropped record shrinks the denominator of every rate computed from the scan while the run still looks complete. `corpus.ScanStats` carries the parse-failure count through `stream_shard`/`stream_group` and out via `Summary.parse_failures`. Check it before publishing any figure; non-zero means every count is a lower bound and must be reported as one.
+
 ### 4.3 Restriction inventory (the core product)
 
 Extract every withheld description. `accessRestriction` has a clean controlled vocabulary:
@@ -242,7 +244,9 @@ Extract every withheld description. `accessRestriction` has a clean controlled v
 
 **Capture `note` and `securityClassification`.** The code that produced `withheld_rg_263.csv` omitted both, and that was a real defect: the restriction code `Other` is meaningless on its own, while the note said the records were statutorily exempt from FOIA *and* MDR. Fields to emit per row:
 
-`naId, recordGroup, level, status, exemptions, securityClassification, note, coverageStart, coverageEnd, title`
+`naId, recordGroup, level, status, exemptions, securityClassification, note, coverageStart, coverageEnd, mediaType, containers, location, title`
+
+Emit `note` **untruncated**. The qualification that makes a code interpretable can sit anywhere in it, and a cut-off statute is worse than no statute. `mediaType`, `containers`, and `location` come from `physicalOccurrences` (`mediaOccurrences[].specificMediaType` / `.containerId`, `referenceUnits[].name`) — a naId without a facility and a container is not yet something a person can request.
 
 Interpretation notes:
 - `Restricted - Possibly` means "not yet reviewed," not "withheld." It is a processing-backlog marker. Treat as a separate class.

@@ -122,3 +122,28 @@ def test_burst_classification(stamp, count, expected):
 def test_midnight_detection():
     assert forensics.Burst("2013-06-27T00:00:00", 10).is_midnight
     assert not forensics.Burst("2018-10-03T09:45:21", 10).is_midnight
+
+
+def test_physical_extracts_extent_and_location():
+    """A naId is only actionable with the facility and container attached."""
+    rec = {
+        "physicalOccurrences": [
+            {
+                "mediaOccurrences": [{"specificMediaType": "Film Reel", "containerId": "R-12"}],
+                "referenceUnits": [{"name": "National Archives at College Park - Motion Pictures"}],
+            },
+            {  # reference copy of the same material -- must not double up
+                "mediaOccurrences": [{"specificMediaType": "Film Reel", "containerId": "R-13"}],
+                "referenceUnits": [{"name": "National Archives at College Park - Motion Pictures"}],
+            },
+        ]
+    }
+    assert schema.physical(rec) == {
+        "mediaType": "Film Reel",
+        "containers": "R-12; R-13",
+        "location": "National Archives at College Park - Motion Pictures",
+    }
+
+
+def test_physical_is_empty_when_absent():
+    assert schema.physical({}) == {"mediaType": "", "containers": "", "location": ""}

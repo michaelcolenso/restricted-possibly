@@ -99,6 +99,37 @@ def parse_restriction(access: dict[str, Any] | None) -> Restriction:
     )
 
 
+def physical(record: dict[str, Any]) -> dict[str, str]:
+    """Media type, container ids, and holding facility from `physicalOccurrences`.
+
+    This is what turns a naId into something a person can actually act on: which
+    NARA facility holds the material and which container it sits in. Multiple
+    occurrences are common (preservation vs reference copies); values are
+    de-duplicated in first-seen order rather than collapsed to the first one.
+    """
+    media: list[str] = []
+    containers: list[str] = []
+    units: list[str] = []
+    for po in record.get("physicalOccurrences") or []:
+        if not isinstance(po, dict):
+            continue
+        for m in po.get("mediaOccurrences") or []:
+            if not isinstance(m, dict):
+                continue
+            if (t := _term(m.get("specificMediaType"))) is not None:
+                media.append(str(t))
+            if (c := m.get("containerId")) is not None:
+                containers.append(str(c))
+        for u in po.get("referenceUnits") or []:
+            if isinstance(u, dict) and (n := u.get("name")) is not None:
+                units.append(str(n))
+    return {
+        "mediaType": "; ".join(dict.fromkeys(media)),
+        "containers": "; ".join(dict.fromkeys(containers)),
+        "location": "; ".join(dict.fromkeys(units)),
+    }
+
+
 def iter_v1_descriptions(items: list[dict[str, Any]]):
     """Yield (level, body) for each description in a parsed v1 shard."""
     for item in items:

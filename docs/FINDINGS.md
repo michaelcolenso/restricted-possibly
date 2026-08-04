@@ -83,6 +83,11 @@ which would make `Other` a general escape hatch rather than a statutory marker.
 Levels: 1,247 fileUnit, 112 series. Partial redaction outnumbers full closure nearly
 4:1 — most withheld material has releasable content in it.
 
+**Parse failures: 0.** The full pass parsed every line in all 400 shards, so these are
+exact counts rather than lower bounds. `Summary.parse_failures` reports this on every
+run; a non-zero value would mean each figure above understates the truth by an unknown
+amount.
+
 **Counting correction.** An earlier pass reported 1,868 restricted (~7%) by folding the
 509 unreviewed records into the withheld count. `Restricted - Possibly` is a
 processing-backlog marker, not a withholding decision (§4.3), so it inflated the
