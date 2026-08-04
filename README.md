@@ -169,11 +169,14 @@ Three activity classes separate cleanly by signature:
 | Signature | Meaning |
 |---|---|
 | Many records, identical stamp, `T00:00:00` | Automated batch import |
-| Clusters of ~45 at real clock time, seconds apart | Human running a bulk tool |
+| 5+ records on one identical real-clock stamp | Human running a bulk tool |
 | One record per 20–40s, sustained for hours | Hand-paced editing (see caveat) |
 
 Verified: `2013-06-27T00:00:00` ×1835 (batch), `2015-11-20T17:18:21` ×45 (tool),
 2018-10-03 09:45→11:12 at 20–40s intervals (hand-paced, not machine).
+
+Detection is exact-match: records sharing a timestamp *to the second*. Nothing clusters
+by proximity, so edits merely seconds apart are not read as a tool run.
 
 `recordHistory` has no actor field, so a window like that one is grouped by time alone —
 two archivists working the same afternoon are indistinguishable from one working longer.

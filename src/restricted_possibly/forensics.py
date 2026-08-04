@@ -11,13 +11,20 @@ Three activity classes are separable by timestamp signature:
 Signature                                        Meaning
 ===============================================  ==========================
 Many records, identical stamp, ``T00:00:00``     Automated batch import
-Clusters of ~45, real clock time, seconds apart  Human running a bulk tool
+5+ records on one identical real-clock stamp     Human running a bulk tool
 One record per 20-40s, sustained for hours       Hand-paced editing
 ===============================================  ==========================
 
 Verified instances: ``2013-06-27T00:00:00`` x1835 (batch);
 ``2015-11-20T17:18:21`` x45 (tool); 2018-10-03 09:45->11:12, 85 records at
 20-40s intervals (hand-paced).
+
+Detection is **exact-match only**. `timestamp_counts` groups identical
+strings, so records seconds apart each count 1 and no bulk-tool run is
+inferred from proximity. Nothing here implements time-neighbourhood
+clustering; a tool that stamped each record a second later would read as
+hand-paced editing. Real instances share one stamp to the second, which is
+why exact matching suffices for them.
 
 The third class separates *human* from *machine* cadence. It does not
 identify a human: v1 carries no actor field, so concurrent editors are

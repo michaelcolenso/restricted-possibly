@@ -5,6 +5,8 @@ from __future__ import annotations
 import io
 import json
 
+import pytest
+
 from restricted_possibly import corpus
 
 
@@ -64,3 +66,19 @@ def test_prefiltered_lines_are_not_parse_failures(monkeypatch):
 
     assert [r["naId"] for r in records] == [1]
     assert stats.parse_failures == 0
+
+
+def test_stream_group_rejects_negative_shard_limits(monkeypatch):
+    """`shards(group)[:-1]` is every shard but the last, silently.
+
+    The CLI validates this, but `inventory.build()` is the advertised library
+    entry point and passed the value straight through.
+    """
+    monkeypatch.setattr(corpus, "shards", lambda *a, **k: [corpus.Shard("k", 1)])
+
+    with pytest.raises(ValueError, match="limit_shards must be >= 0"):
+        list(corpus.stream_group("rg_263", limit_shards=-1))
+
+    # 0 and None both mean "no limit" and must still work.
+    monkeypatch.setattr(corpus, "stream_shard", lambda *a, **k: iter([{"naId": 1}]))
+    assert len(list(corpus.stream_group("rg_263", limit_shards=None))) == 1
