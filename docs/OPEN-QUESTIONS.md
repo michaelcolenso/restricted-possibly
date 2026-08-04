@@ -31,7 +31,15 @@ A single counterexample would reopen the declassification-monitoring question en
 ## 3. Where else does `Other` appear, and what do its notes say?
 
 In RG 263 it flagged a statutorily exempt covert operation. It's an escape hatch from the
-controlled vocabulary, and the `note` field always explains it. Corpus-wide sweep is cheap.
+controlled vocabulary, and in that one record group the `note` field explained every
+instance — 25 citing the CIA Information Act, one the Nazi War Crimes acts, one a
+pre-transfer redaction.
+
+**Whether that holds anywhere else is the hypothesis this sweep tests**, not a premise it
+starts from. An `Other` record with a missing or uninformative note is the interesting
+outcome: it would falsify the RG 263 finding's load-bearing claim (see `FINDINGS.md`) and
+mean the code is a genuine void rather than a pointer. Record those separately from the
+ones whose notes do explain. The sweep is cheap either way.
 
 ## 4. What is in the 100 GB+ record groups?
 

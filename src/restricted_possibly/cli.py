@@ -64,7 +64,7 @@ def peek(group: str) -> None:
 def inventory_cmd(
     group: str,
     out: Path = typer.Option(Path("data"), help="Output directory."),
-    limit_shards: int = typer.Option(0, help="0 = all shards. Use a small N to smoke-test."),
+    limit_shards: int = typer.Option(0, min=0, help="0 = all shards. Use a small N to smoke-test."),
     include_personal: bool = typer.Option(
         False,
         help="Emit identifying fields for item/fileUnit (b)(6) records. Off by default.",

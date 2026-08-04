@@ -104,3 +104,20 @@ def test_limit_shards_at_or_above_the_shard_count_does_not_bypass_the_guard(monk
     for limit in ("400", "500"):
         result = runner.invoke(cli.app, ["inventory", "rg_64", "--limit-shards", limit])
         assert result.exit_code == 1, f"--limit-shards {limit} slipped past the guard"
+
+
+def test_negative_shard_limits_are_rejected(monkeypatch):
+    """`shards(group)[:-1]` scans all but the last shard, labelled "-1 shards"."""
+    monkeypatch.setattr(corpus, "shards", lambda *a, **k: [corpus.Shard("k", 1)])
+    called = False
+
+    def _build(*a, **k):
+        nonlocal called
+        called = True
+        return [], _summary()
+
+    monkeypatch.setattr(inventory, "build", _build)
+
+    result = runner.invoke(cli.app, ["inventory", "rg_263", "--limit-shards", "-1"])
+    assert result.exit_code != 0
+    assert not called
