@@ -137,7 +137,7 @@ def batch_timestamps(items: list[dict[str, Any]], threshold: int = BATCH_THRESHO
 def sessions(
     items: list[dict[str, Any]],
     gap_seconds: int = 300,
-    min_edits: int = 10,
+    min_records: int = 10,
     max_identical: int = TOOL_THRESHOLD,
     tool_stamps: set[str] | None = None,
 ) -> list[dict[str, Any]]:
@@ -184,7 +184,7 @@ def sessions(
         if tool_stamps is not None
         else tool_timestamps_from_counts(counts, max_identical)
     )
-    return sessions_from_events(collect_events(items, machine), gap_seconds, min_edits)
+    return sessions_from_events(collect_events(items, machine), gap_seconds, min_records)
 
 
 def collect_events(items: list[dict[str, Any]], machine_stamps: set[str]) -> list[tuple[str, str]]:
@@ -219,9 +219,18 @@ def collect_events(items: list[dict[str, Any]], machine_stamps: set[str]) -> lis
 
 
 def sessions_from_events(
-    events: list[tuple[str, str]], gap_seconds: int = 300, min_edits: int = 10
+    events: list[tuple[str, str]], gap_seconds: int = 300, min_records: int = 10
 ) -> list[dict[str, Any]]:
     """Group `(timestamp, naId)` pairs into contiguous activity windows.
+
+    `min_records` counts **distinct naIds**, not events. The signature this
+    looks for is "one record per 20-40s, sustained" -- a person moving
+    *through a queue*. One record edited ten times in ten minutes is a
+    different thing entirely (someone wrestling with a single description),
+    and gating on raw event count reported it as a ten-record window.
+
+    Each window carries both numbers: `records` is what the threshold uses,
+    `count` is the edit events behind them.
 
     Time-only grouping -- see the warning in `sessions` about what a window
     does and does not tell you.
@@ -240,13 +249,17 @@ def sessions_from_events(
     cur: list[tuple[datetime, str]] = []
     for ev in parsed:
         if cur and (ev[0] - cur[-1][0]).total_seconds() > gap_seconds:
-            if len(cur) >= min_edits:
+            if _distinct(cur) >= min_records:
                 out.append(_session(cur))
             cur = []
         cur.append(ev)
-    if len(cur) >= min_edits:
+    if _distinct(cur) >= min_records:
         out.append(_session(cur))
     return out
+
+
+def _distinct(events) -> int:
+    return len({na for _, na in events})
 
 
 def _session(events) -> dict[str, Any]:
@@ -254,6 +267,7 @@ def _session(events) -> dict[str, Any]:
     return {
         "start": events[0][0].isoformat(),
         "end": events[-1][0].isoformat(),
+        "records": _distinct(events),
         "count": len(events),
         "duration_minutes": round(span / 60, 1),
         "mean_interval_seconds": round(span / max(len(events) - 1, 1), 1),

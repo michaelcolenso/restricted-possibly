@@ -213,7 +213,7 @@ def test_tool_boundary_is_the_same_for_labelling_and_session_exclusion():
     assert burst.classification == "interactive bulk tool"
 
     items = _stamped(*[(None, [stamp]) for _ in range(forensics.TOOL_THRESHOLD)])
-    assert forensics.sessions(items, min_edits=1) == []  # excluded, not a person
+    assert forensics.sessions(items, min_records=1) == []  # excluded, not a person
 
 
 def test_tool_exclusion_boundary_is_shared_by_label_and_windows():
@@ -236,7 +236,7 @@ def test_a_tool_burst_cannot_pad_a_window_to_the_minimum():
         *[(None, [stamp]) for _ in range(forensics.TOOL_THRESHOLD)],
         *[(None, [f"2015-11-20T17:19:{s:02d}"]) for s in range(0, 50, 10)],
     )
-    assert forensics.sessions(items, min_edits=10) == []
+    assert forensics.sessions(items, min_records=10) == []
 
 
 def test_midnight_stamps_never_enter_a_window():
@@ -245,7 +245,7 @@ def test_midnight_stamps_never_enter_a_window():
         ("Unrestricted", ["2013-06-27T00:00:00"]),  # lone, far below BATCH_THRESHOLD
         *[(None, [f"2018-10-03T09:{m:02d}:00"]) for m in range(10)],
     )
-    (window,) = forensics.sessions(items, min_edits=10)
+    (window,) = forensics.sessions(items, min_records=10)
     assert window["count"] == 10  # the midnight edit is not among them
     assert window["start"].startswith("2018-10-03T09:00")
 
@@ -308,7 +308,7 @@ def test_a_repeated_stamp_contributes_one_event_to_a_window():
         ("Unrestricted", ["2018-10-03T09:00:00"] * 3),
         *[(None, [f"2018-10-03T09:{m:02d}:00"]) for m in range(1, 10)],
     )
-    (window,) = forensics.sessions(items, min_edits=10)
+    (window,) = forensics.sessions(items, min_records=10)
     assert window["count"] == 10  # not 12
 
 
@@ -362,8 +362,50 @@ def test_sessions_accepts_group_wide_tool_stamps():
     # Only 3 of the run's records landed here, so it clears no local threshold.
     assert forensics.tool_timestamps_from_counts(forensics.timestamp_counts(shard)) == set()
 
-    (padded,) = forensics.sessions(shard, min_edits=10)
+    (padded,) = forensics.sessions(shard, min_records=10)
     assert padded["count"] == 10  # 3 machine events counted as human
 
-    # Told what the group knows, the window drops below min_edits and vanishes.
-    assert forensics.sessions(shard, min_edits=10, tool_stamps={burst}) == []
+    # Told what the group knows, the window drops below min_records and vanishes.
+    assert forensics.sessions(shard, min_records=10, tool_stamps={burst}) == []
+
+
+def test_one_record_edited_repeatedly_is_not_a_window():
+    """The signature is a person moving through a queue, not stuck on one file.
+
+    Ten edits to a single naId inside the gap used to clear `min_records`
+    because the threshold counted events. That is someone wrestling with one
+    description, which is a different phenomenon.
+    """
+    one_record = [
+        {
+            "description": {
+                "fileUnit": {
+                    "naId": "9",
+                    "recordHistory": {
+                        "changed": {
+                            "modification": [
+                                {"dateTime": f"2018-10-03T09:{m:02d}:00"} for m in range(10)
+                            ]
+                        }
+                    },
+                }
+            }
+        }
+    ]
+    assert forensics.sessions(one_record, min_records=10) == []
+
+    # Ten distinct records at the same cadence is the real signature.
+    ten_records = _stamped(*[(None, [f"2018-10-03T09:{m:02d}:00"]) for m in range(10)])
+    (window,) = forensics.sessions(ten_records, min_records=10)
+    assert window["records"] == 10
+    assert window["count"] == 10
+
+
+def test_a_window_reports_records_and_edits_separately():
+    items = _stamped(
+        (None, ["2018-10-03T09:00:00", "2018-10-03T09:01:00"]),
+        *[(None, [f"2018-10-03T09:{m:02d}:00"]) for m in range(2, 5)],
+    )
+    (window,) = forensics.sessions(items, min_records=4)
+    assert window["records"] == 4
+    assert window["count"] == 5
