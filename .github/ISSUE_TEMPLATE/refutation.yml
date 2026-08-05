@@ -1,0 +1,14 @@
+name: Refutation
+description: Kill an existing claim (equally welcome)
+labels: ["refutation"]
+body:
+  - type: textarea
+    id: target
+    attributes:
+      label: Which claim, and where is it stated?
+    validations: {required: true}
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence it's wrong
+    validations: {required: true}

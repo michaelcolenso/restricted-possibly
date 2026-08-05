@@ -1,0 +1,28 @@
+# Corpus data — never commit. Shards are 50 MB+, vintages are hundreds of GB.
+data/*
+!data/.gitkeep
+*.jsonl
+*.csv
+!docs/**/*.csv
+rg_*.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
