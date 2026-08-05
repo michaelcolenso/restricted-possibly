@@ -85,18 +85,22 @@ def inventory_cmd(
 
     # This scan is not resumable: it writes nothing until the last shard, so an
     # interruption 170 GB into RG 64 costs the whole run. Until checkpointing
-    # exists, refuse the groups where that bill is unaffordable rather than
+    # exists, refuse the reads where that bill is unaffordable rather than
     # letting someone discover it at the end.
-    # `--limit-shards N` only counts as a sample if it actually samples:
-    # `shards(group)[:N]` with N >= len(sh) is the whole group, and would slip
-    # a full 180 GB pass past this guard while labelling the output partial.
-    gb = sum(s.size for s in sh) / 1e9
+    #
+    # The guard is on *bytes actually selected*, not on whether a limit was
+    # given. `--limit-shards N` with N >= len(sh) is the whole group, and even
+    # a strict subset can be nearly all of it -- 399 of RG 64's 400 shards is
+    # ~180 GB and would have slipped through a shard-count test.
     samples = 0 < limit_shards < len(sh)
-    if gb > LARGE_GROUP_GB and not (samples or allow_large):
+    selected = sh[:limit_shards] if samples else sh
+    gb = sum(s.size for s in selected) / 1e9
+    if gb > LARGE_GROUP_GB and not allow_large:
+        scope = f"{len(selected)} of {len(sh)} shards" if samples else f"all {len(sh)} shards"
         console.print(
-            f"[red]{group} is {gb:.1f} GB across {len(sh)} shards and this scan has no "
-            f"checkpointing[/red] -- an interruption at any point loses everything. "
-            "Smoke-test with --limit-shards first, or pass --allow-large to accept the risk."
+            f"[red]{group}: {scope} is {gb:.1f} GB and this scan has no checkpointing"
+            f"[/red] -- an interruption at any point loses everything. Use a smaller "
+            "--limit-shards, or pass --allow-large to accept the risk."
         )
         raise typer.Exit(1)
 

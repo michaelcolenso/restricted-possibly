@@ -139,6 +139,7 @@ def sessions(
     gap_seconds: int = 300,
     min_edits: int = 10,
     max_identical: int = TOOL_THRESHOLD,
+    tool_stamps: set[str] | None = None,
 ) -> list[dict[str, Any]]:
     """Contiguous **activity windows** of hand-paced editing.
 
@@ -158,9 +159,31 @@ def sessions(
     are one bulk-tool run -- the verified `2015-11-20T17:18:21` x45 event is
     the type case, and left in it reads as a 45-edit window at zero-second
     intervals, which is the opposite of the hand-worked cadence this looks for.
+
+    .. warning::
+       **Pass `tool_stamps` for anything but a toy**, for the same reason
+       `edit_intensity` needs `batch_stamps`: identifying a bulk-tool run is a
+       frequency test over the whole group. A stamp shared by 5+ records
+       corpus-wide but appearing 3 times in *this* shard clears no threshold
+       locally, stays in the events, and pads or merges a window that is then
+       reported as hand-paced work.
+
+       Build it once across the group and hand it in::
+
+           counts = Counter()
+           for path in shards:
+               counts += timestamp_counts(schema.load_v1(path))
+           tool_stamps = tool_timestamps_from_counts(counts)
+
+       Omitting it falls back to `items`-local detection, correct only when
+       `items` is the entire group.
     """
     counts = timestamp_counts(items)
-    machine = tool_timestamps_from_counts(counts, max_identical)
+    machine = (
+        tool_stamps
+        if tool_stamps is not None
+        else tool_timestamps_from_counts(counts, max_identical)
+    )
     return sessions_from_events(collect_events(items, machine), gap_seconds, min_edits)
 
 

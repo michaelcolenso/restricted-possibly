@@ -344,3 +344,26 @@ def test_explicit_batch_stamps_are_ignored_when_not_excluding():
         batch_stamps={"2013-06-27T00:00:00"},
     )
     assert raw["open"]["mean_mods"] == 1.0
+
+
+def test_sessions_accepts_group_wide_tool_stamps():
+    """A tool run spread thin across shards is invisible shard-locally.
+
+    5+ records share the stamp corpus-wide but only 3 land in this shard, so
+    local detection leaves them in and they pad a window that is then reported
+    as hand-paced work.
+    """
+    burst = "2018-10-03T09:07:00"  # same afternoon as the real work
+    shard = _stamped(
+        *[(None, [burst]) for _ in range(3)],
+        *[(None, [f"2018-10-03T09:{m:02d}:00"]) for m in range(7)],
+    )
+
+    # Only 3 of the run's records landed here, so it clears no local threshold.
+    assert forensics.tool_timestamps_from_counts(forensics.timestamp_counts(shard)) == set()
+
+    (padded,) = forensics.sessions(shard, min_edits=10)
+    assert padded["count"] == 10  # 3 machine events counted as human
+
+    # Told what the group knows, the window drops below min_edits and vanishes.
+    assert forensics.sessions(shard, min_edits=10, tool_stamps={burst}) == []

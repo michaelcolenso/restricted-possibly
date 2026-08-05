@@ -169,3 +169,33 @@ def test_a_real_sample_is_still_recorded_as_partial(monkeypatch, tmp_path):
     assert names == ["summary_rg_263.partial-2shards.json", "withheld_rg_263.partial-2shards.csv"]
     summary = json.loads((tmp_path / "summary_rg_263.partial-2shards.json").read_text())
     assert summary["limit_shards"] == 2
+
+
+def test_a_nearly_complete_sample_is_still_guarded(monkeypatch):
+    """399 of RG 64's 400 shards is ~180 GB, and `samples` is true for it."""
+    big = [corpus.Shard(f"k{i}", 500_000_000) for i in range(400)]
+    monkeypatch.setattr(corpus, "shards", lambda *a, **k: big)
+    called = False
+
+    def _build(*a, **k):
+        nonlocal called
+        called = True
+        return [], _summary()
+
+    monkeypatch.setattr(inventory, "build", _build)
+
+    blocked = runner.invoke(cli.app, ["inventory", "rg_64", "--limit-shards", "399"])
+    assert blocked.exit_code == 1
+    assert not called
+
+
+def test_a_small_sample_of_a_large_group_is_allowed(monkeypatch, tmp_path):
+    """The guard is on selected bytes, so a genuine smoke test still runs."""
+    big = [corpus.Shard(f"k{i}", 500_000_000) for i in range(400)]
+    monkeypatch.setattr(corpus, "shards", lambda *a, **k: big)
+    monkeypatch.setattr(inventory, "build", lambda *a, **k: ([], _summary()))
+
+    ok = runner.invoke(
+        cli.app, ["inventory", "rg_64", "--out", str(tmp_path), "--limit-shards", "3"]
+    )
+    assert ok.exit_code == 0
